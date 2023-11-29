@@ -26,7 +26,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
-#include <error.h>
+#include <err.h>
 #include <getopt.h>
 #include <poll.h>
 #include <fcntl.h>
@@ -95,18 +95,20 @@ static void run_v4l2(struct sdl_ctx *ctx, const char *devpath)
 			if (errno == EINTR)
 				continue;
 
-			error(1, errno, "v4l2 failure");
+			err(1, "v4l2 failure");
 		}
 
 		if (buf.bytesused != ISKIP + ISIZE)
-			error(1, 0, "bad image size (%d != %d), is this the "
-			      "correct device?", buf.bytesused, ISIZE * 2);
+			errx(1, "bad image size (%d != %d), is '%s' the "
+			      "correct device? Pass '-d' to specify a "
+			      "different one", buf.bytesused, ISIZE * 2,
+			      devpath);
 
 		data = v4l2_buf_mmap(dev, buf.index) + ISKIP;
 
 		if (record)
 			if (lavc_encode(record, buf.sequence, data, ISIZE))
-				error(1, errno, "can't record");
+				err(1, "can't record");
 
 		if (ctx) {
 			switch (paint_frame(ctx, buf.sequence, data)) {
@@ -162,7 +164,7 @@ static void run_playback(struct sdl_ctx *ctx, const char *filepath)
 		}
 
 		if (read(timer_fd, &ticks, sizeof(ticks)) != sizeof(ticks))
-			error(1, errno, "bad timerfd read");
+			err(1, "bad timerfd read");
 
 		if (!paused)
 			seq += ticks;
@@ -235,7 +237,7 @@ int main(int argc, char **argv)
 			break;
 		case 'f':
 			if (access(optarg, R_OK))
-				error(1, errno, "bad font '%s'", optarg);
+				err(1, "bad font '%s'", optarg);
 
 			fontpath = strdup(optarg);
 			break;
@@ -262,7 +264,7 @@ done:
 
 	ctx = sdl_open(window_width, window_height, !!filepath, fontpath);
 	if (!ctx)
-		error(1, 0, "can't initialize libsdl");
+		errx(1, "can't initialize libsdl");
 
 	if (filepath)
 		run_playback(ctx, filepath);

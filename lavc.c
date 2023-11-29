@@ -20,7 +20,8 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <errno.h>
-#include <error.h>
+#include <time.h>
+#include <err.h>
 #include <unistd.h>
 #include <fcntl.h>
 
@@ -46,7 +47,7 @@ static time_t now(void)
 	struct timespec t;
 
 	if (clock_gettime(CLOCK_REALTIME, &t))
-		error(1, errno, "can't get time");
+		err(1, "can't get time");
 
 	return t.tv_sec;
 }
@@ -59,31 +60,31 @@ struct lavc_ctx *lavc_start_encode(int width, int height, int fps, int pix_fmt)
 
 	c = calloc(1, sizeof(*c));
 	if (!c)
-		error(1, ENOMEM, "can't allocate lavc context");
+		errx(1, "can't allocate lavc context");
 
 	tag = pix_fmt == AV_PIX_FMT_GRAY16LE ? "raw" : "rgb";
 	snprintf(outpath, sizeof(outpath), "%ld-%s.mkv", now(), tag);
 	avformat_alloc_output_context2(&c->fctx, NULL, NULL, outpath);
 	if (!c->fctx)
-		error(1, 0, "can't allocate format context");
+		errx(1, "can't allocate format context");
 
 	c->fmt = c->fctx->oformat;
 
 	c->stream = avformat_new_stream(c->fctx, NULL);
 	if (!c->stream)
-		error(1, 0, "can't allocate output stream");
+		errx(1, "can't allocate output stream");
 
 	c->pkt = av_packet_alloc();
 	if (!c->pkt)
-		error(1, 0, "can't allocate video packet");
+		errx(1, "can't allocate video packet");
 
 	c->codec = avcodec_find_encoder(AV_CODEC_ID_FFV1);
 	if (!c->codec)
-		error(1, 0, "can't find FFV1 codec");
+		errx(1, "can't find FFV1 codec");
 
 	c->ctx = avcodec_alloc_context3(c->codec);
 	if (!c->ctx)
-		error(1, 0, "can't allocate video context");
+		errx(1, "can't allocate video context");
 
 	c->ctx->codec_type = AVMEDIA_TYPE_VIDEO;
 	c->ctx->codec_id = AV_CODEC_ID_FFV1;
@@ -94,28 +95,28 @@ struct lavc_ctx *lavc_start_encode(int width, int height, int fps, int pix_fmt)
 	c->ctx->pix_fmt = pix_fmt;
 
 	if (avcodec_open2(c->ctx, c->codec, NULL))
-		error(1, 0, "can't open codec");
+		errx(1, "can't open codec");
 
 	c->frame = av_frame_alloc();
 	if (!c->frame)
-		error(1, 0, "can't allocate video frame");
+		errx(1, "can't allocate video frame");
 
 	c->frame->format = c->ctx->pix_fmt;
 	c->frame->width = width;
 	c->frame->height = height;
 
 	if (av_frame_get_buffer(c->frame, 0))
-		error(1, 0, "can't allocate video frame data");
+		errx(1, "can't allocate video frame data");
 
 	if (avcodec_parameters_from_context(c->stream->codecpar, c->ctx))
-		error(1, 0, "can't copy codec parameters");
+		errx(1, "can't copy codec parameters");
 
 	if (!(c->fmt->flags & AVFMT_NOFILE))
 		if (avio_open(&c->fctx->pb, outpath, AVIO_FLAG_WRITE) < 0)
-			error(1, errno, "can't open record file");
+			err(1, "can't open record file");
 
 	if (avformat_write_header(c->fctx, NULL) < 0)
-		error(1, 0, "can't write header");
+		errx(1, "can't write header");
 
 	return c;
 }
@@ -126,7 +127,7 @@ int lavc_encode(struct lavc_ctx *c, uint32_t pts, const uint8_t *data, int len)
 
 	if (data) {
 		if (av_frame_make_writable(c->frame))
-			error(1, 0, "can't make frame writable");
+			errx(1, "can't make frame writable");
 
 		c->frame->pts = pts * 40;
 		memcpy(c->frame->data[0], data, len);
@@ -134,7 +135,7 @@ int lavc_encode(struct lavc_ctx *c, uint32_t pts, const uint8_t *data, int len)
 
 	r = avcodec_send_frame(c->ctx, data ? c->frame : NULL);
 	if (r < 0)
-		error(1, 0, "can't send frame for encoding");
+		errx(1, "can't send frame for encoding");
 
 	while (r >= 0) {
 		r = avcodec_receive_packet(c->ctx, c->pkt);
@@ -145,7 +146,7 @@ int lavc_encode(struct lavc_ctx *c, uint32_t pts, const uint8_t *data, int len)
 				return 0;
 
 			default:
-				error(1, r, "bad packet from encoder");
+				errx(1, "bad packet from encoder: %d", r);
 			}
 		}
 
@@ -153,7 +154,7 @@ int lavc_encode(struct lavc_ctx *c, uint32_t pts, const uint8_t *data, int len)
 		c->pkt->dts = pts * 40;
 		c->pkt->duration = 40;
 		if (av_interleaved_write_frame(c->fctx, c->pkt) < 0)
-			error(1, 0, "can't write encoded data");
+			errx(1, "can't write encoded data");
 	}
 
 	return r;
@@ -182,46 +183,46 @@ struct lavc_ctx *lavc_start_decode(const char *path)
 
 	c = calloc(1, sizeof(*c));
 	if (!c)
-		error(1, ENOMEM, "can't allocate lavc context");
+		errx(1, "can't allocate lavc context");
 
 	if (avformat_open_input(&c->fctx, path, NULL, NULL) < 0)
-		error(1, 0, "can't open input file '%s'", path);
+		errx(1, "can't open input file '%s'", path);
 
 	if (avformat_find_stream_info(c->fctx, NULL) < 0)
-		error(1, 0, "no stream information in '%s'", path);
+		errx(1, "no stream information in '%s'", path);
 
 	sidx = av_find_best_stream(c->fctx, AVMEDIA_TYPE_VIDEO, -1, -1, NULL, 0);
 	if (sidx < 0)
-		error(1, 0, "no video stream in '%s'", path);
+		errx(1, "no video stream in '%s'", path);
 
 	c->stream = c->fctx->streams[sidx];
 	c->codec = avcodec_find_decoder(c->stream->codecpar->codec_id);
 	if (!c->codec)
-		error(1, 0, "can't find decoder");
+		errx(1, "can't find decoder");
 
 	c->ctx = avcodec_alloc_context3(c->codec);
 	if (!c->ctx)
-		error(1, 0, "can't allocate decoder context");
+		errx(1, "can't allocate decoder context");
 
 	if (avcodec_parameters_to_context(c->ctx, c->stream->codecpar) < 0)
-		error(1, 0, "can't copy decoder parameters");
+		errx(1, "can't copy decoder parameters");
 
 	if (avcodec_open2(c->ctx, c->codec, NULL) < 0)
-		error(1, 0, "can't open decoder codec");
+		errx(1, "can't open decoder codec");
 
 	ret = av_image_alloc(tmp_ptr, tmp_sz, c->ctx->width, c->ctx->height,
 			     c->ctx->pix_fmt, 1);
 
 	if (ret < 0)
-		error(1, 0, "can't allocate image memory");
+		errx(1, "can't allocate image memory");
 
 	c->frame = av_frame_alloc();
 	if (!c->frame)
-		error(1, 0, "can't allocate image frame");
+		errx(1, "can't allocate image frame");
 
 	c->pkt = av_packet_alloc();
 	if (!c->pkt)
-		error(1, 0, "can't allocate image packet");
+		errx(1, "can't allocate image packet");
 
 	return c;
 }
@@ -241,7 +242,7 @@ again:
 		}
 
 		if (avcodec_send_packet(c->ctx, c->pkt) < 0)
-			error(1, 0, "can't submit packet");
+			errx(1, "can't submit packet");
 
 		av_packet_unref(c->pkt);
 		c->queued = 1;

@@ -26,7 +26,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
-#include <error.h>
+#include <err.h>
 #include <getopt.h>
 #include <poll.h>
 #include <fcntl.h>
@@ -534,7 +534,7 @@ int paint_frame(struct sdl_ctx *c, uint32_t seq, const uint8_t *data)
 skippaint:
 	if (c->vrecord)
 		if (lavc_encode(c->vrecord, seq, memptr, VSIZE))
-			error(1, errno, "can't vrecord");
+			err(1, "can't vrecord");
 
 	SDL_UnlockTexture(c->t);
 	SDL_RenderCopy(c->r, c->t, &rect, &rect);
@@ -569,7 +569,7 @@ struct sdl_ctx *sdl_open(int upscaled_width, int upscaled_height, bool pb,
 	struct sdl_ctx *c;
 
 	if (access(fontpath, R_OK))
-		error(1, errno, "can't read '%s'", fontpath);
+		err(1, "can't read '%s': pass a path to a valid font with '-f'", fontpath);
 
 	c = calloc(1, sizeof(*c));
 	if (!c)

@@ -21,7 +21,7 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <errno.h>
-#include <error.h>
+#include <err.h>
 #include <poll.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
@@ -73,19 +73,19 @@ static void v4l2_init_stream(struct v4l2_dev *dev)
 	int i;
 
 	if (ioctl(dev->v4l2_fd, VIDIOC_QUERYCAP, &dev->cap))
-		error(1, errno, "VIDIOC_QUERYCAP");
+		err(1, "VIDIOC_QUERYCAP");
 
 	if (!(dev->cap.device_caps & V4L2_CAP_VIDEO_CAPTURE))
-		error(1, errno, "no capture support!");
+		err(1, "no capture support!");
 
 	if (!(dev->cap.device_caps & V4L2_CAP_STREAMING))
-		error(1, errno, "no streaming support!");
+		err(1, "no streaming support!");
 
 	if (ioctl(dev->v4l2_fd, VIDIOC_REQBUFS, &req))
-		error(1, errno, "VIDIOC_REQBUFS");
+		err(1, "VIDIOC_REQBUFS");
 
 	if (req.count > MAXBUFS)
-		error(1, 0, "too many buffers! %d > %d", req.count, MAXBUFS);
+		errx(1, "too many buffers! %d > %d", req.count, MAXBUFS);
 
 	dev->nr_buffers = req.count;
 	for (i = 0; i < dev->nr_buffers; i++) {
@@ -97,7 +97,7 @@ static void v4l2_init_stream(struct v4l2_dev *dev)
 		};
 
 		if (ioctl(dev->v4l2_fd, VIDIOC_QUERYBUF, &bufs[i]))
-			error(1, errno, "VIDIOC_QUERYBUF");
+			err(1, "VIDIOC_QUERYBUF");
 
 		dev->buffer_lens[i] = bufs[i].length;
 		dev->mmaps[i] = mmap(NULL, bufs[i].length,
@@ -106,16 +106,16 @@ static void v4l2_init_stream(struct v4l2_dev *dev)
 				     bufs[i].m.offset);
 
 		if (dev->mmaps[i] == MAP_FAILED)
-			error(1, errno, "can't mmap buffer %d", i);
+			err(1, "can't mmap buffer %d", i);
 	}
 
 	for (i = 0; i < dev->nr_buffers; i++)
 		if (ioctl(dev->v4l2_fd, VIDIOC_QBUF, &bufs[i]))
-			error(1, errno, "initial VIDIOC_QBUF");
+			err(1, "initial VIDIOC_QBUF");
 
 	i = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	if (ioctl(dev->v4l2_fd, VIDIOC_STREAMON, &i))
-		error(1, errno, "VIDIOC_STREAMON");
+		err(1, "VIDIOC_STREAMON");
 }
 
 struct v4l2_dev *v4l2_open(const char *path, uint32_t fmt, int width,
@@ -134,17 +134,17 @@ struct v4l2_dev *v4l2_open(const char *path, uint32_t fmt, int width,
 
 	dev = calloc(1, sizeof(*dev));
 	if (!dev)
-		error(1, 0, "no memory for v4l2_dev");
+		errx(1, "no memory for v4l2_dev");
 
 	dev->v4l2_fd = open(path, O_RDWR | O_NONBLOCK);
 	if (dev->v4l2_fd == -1)
-		error(1, errno, "can't open V4L2 dev %s", path);
+		err(1, "can't open V4L2 dev %s", path);
 
 	if (v4l2_set_format(dev, &pix))
-		error(1, errno, "VIDIOC_S_FMT");
+		err(1, "VIDIOC_S_FMT");
 
 	if (v4l2_set_rate(dev, &fp))
-		error(1, errno, "VIDIOC_S_PARM");
+		err(1, "VIDIOC_S_PARM");
 
 	v4l2_init_stream(dev);
 	return dev;
@@ -182,7 +182,7 @@ const uint8_t *v4l2_buf_mmap(struct v4l2_dev *dev, int index)
 void v4l2_put_buffer(struct v4l2_dev *dev, const struct v4l2_buffer *buf)
 {
 	if (ioctl(dev->v4l2_fd, VIDIOC_QBUF, buf))
-		error(1, errno, "VIDIOC_QBUF");
+		err(1, "VIDIOC_QBUF");
 }
 
 void v4l2_close(struct v4l2_dev *dev)
@@ -191,7 +191,7 @@ void v4l2_close(struct v4l2_dev *dev)
 
 	i = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	if (ioctl(dev->v4l2_fd, VIDIOC_STREAMOFF, &i))
-		error(1, errno, "VIDIOC_STREAMOFF");
+		err(1, "VIDIOC_STREAMOFF");
 
 	for (i = 0; i < dev->nr_buffers; i++)
 		munmap(dev->mmaps[i], dev->buffer_lens[i]);
