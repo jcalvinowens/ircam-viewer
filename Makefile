@@ -1,3 +1,6 @@
+CC ?= gcc
+LD ?= ld
+
 CFLAGS = -O3 -std=c11 -pedantic -D_POSIX_C_SOURCE=200809L -D_REENTRANT \
 	 -I/usr/include/SDL2
 
@@ -19,7 +22,7 @@ disasm: main.s sdl.s v4l2.s lavc.s fontcache.s
 
 sdl.s: gamma.h
 sdl.o: gamma.h
-ircam: main.o sdl.o v4l2.o lavc.o fontcache.o
+ircam: main.o sdl.o v4l2.o lavc.o fontcache.o fonts/deja_vu_sans_mono.o
 	$(CC) -o $@ $^ $(CFLAGS) $(LFLAGS)
 
 util/kfwd: util/kfwd.o
@@ -34,9 +37,12 @@ gamma.h:
 %.s: %.c
 	$(CC) $< $(CFLAGS) -c -S -o $@
 
+%.o: %.ttf
+	$(LD) -r -b binary -z noexecstack -o $@ $<
+
 # Don't enable any warnings for FC_FontCache
 fontcache.o: fontcache.c
 	$(CC) $< $(CFLAGS) -c -o $@
 
 clean:
-	rm -f ircam util/kfwd *.mkv *.o *.s util/*.o util/*.s gamma.h
+	rm -f ircam util/kfwd *.mkv *.o *.s fonts/*.o util/*.o util/*.s gamma.h

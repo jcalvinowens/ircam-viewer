@@ -41,12 +41,14 @@
 #include "lavc.h"
 #include "sdl.h"
 
+extern const uint8_t _binary_fonts_deja_vu_sans_mono_ttf_start;
+extern const uint8_t _binary_fonts_deja_vu_sans_mono_ttf_end;
+
 static int record_only;
 static struct lavc_ctx *record;
 static int window_width = 1440;
 static int window_height = 1080;
-static const char *fontpath =
-	"/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf";
+static const char *fontpath;
 
 static sig_atomic_t stop;
 
@@ -209,6 +211,7 @@ int main(int argc, char **argv)
 	struct sigaction stop_action = {
 		.sa_handler = stopper,
 	};
+	FILE *font_tmpfile = NULL;
 	char *v4l2dev = NULL;
 	char *filepath = NULL;
 	struct sdl_ctx *ctx;
@@ -262,6 +265,20 @@ done:
 		goto out;
 	}
 
+	if (!fontpath) {
+		const uint8_t *src = &_binary_fonts_deja_vu_sans_mono_ttf_start;
+		size_t len = &_binary_fonts_deja_vu_sans_mono_ttf_end - src;
+		char tmp[4096];
+
+		font_tmpfile = tmpfile();
+		if (fwrite(src, 1, len, font_tmpfile) != len)
+			err(1, "can't initialize built-in font, try -f");
+
+		snprintf(tmp, sizeof(tmp), "/proc/self/fd/%d",
+			 fileno(font_tmpfile));
+		fontpath = strdup(tmp);
+	}
+
 	ctx = sdl_open(window_width, window_height, !!filepath, fontpath);
 	if (!ctx)
 		errx(1, "can't initialize libsdl");
@@ -273,6 +290,10 @@ done:
 
 	sdl_close(ctx);
 out:
+	if (font_tmpfile)
+		fclose(font_tmpfile);
+
+	free((void *)fontpath);
 	free(v4l2dev);
 	free(filepath);
 	return 0;
