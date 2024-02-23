@@ -57,7 +57,7 @@ Building
 
 `$ make -j -s`
 
-Currently, only the one specific camera model is supported, but more will be
+Currently, only two specific camera models are supported: TOPDON TC001 and RX-450, but more will be
 added in the future.
 
 Viewing
