@@ -3,7 +3,7 @@ Linux Infrared Camera Viewer
 
 A lightweight GUI for viewing and recording output from USB infrared cameras.
 
-![](https://jcalvinowens.github.io/img/ircam/ss8.png)
+![](https://static.wbinvd.org/img/ircam/ss8.png)
 
 Features include:
 
@@ -25,7 +25,7 @@ hardware division).
 
 It works!
 
-![](https://jcalvinowens.github.io/img/ircam/pi-1.jpg)
+![](https://static.wbinvd.org/img/ircam/pi-1.jpg)
 
 My initial implementation relied on the BCM2835 hardware floating point support,
 and pegged the CPU at 10fps on the Zero. Converting that floating point
@@ -44,7 +44,7 @@ division (to compute the multiplicative inverse), an obviously economical
 proposition with 49152 pixels in each frame. With that final improvement, the
 formerly overloaded Pi Zero W is now 50% idle.
 
-![](https://jcalvinowens.github.io/img/ircam/pi-2.jpg)
+![](https://static.wbinvd.org/img/ircam/pi-2.jpg)
 
 I additionally implemented a 256KB lookup table of all 65536 necessary 32-bit
 multiplicative inverses, but it showed no measurable advantage on the Pi in
@@ -65,7 +65,7 @@ Viewing
 
 `$ ./ircam -d /dev/video4`
 
-![](https://jcalvinowens.github.io/img/ircam/ss4.png)
+![](https://static.wbinvd.org/img/ircam/ss4.png)
 
 In the upper left, you'll find the minimum, point measurement, and maximum
 temperatures. The second row shows the current view dynamic range limits, or
@@ -79,39 +79,39 @@ The emissivity is always assumed to be 1.0.
 
 You can view the help text at any time by holding the [H] key:
 
-![](https://jcalvinowens.github.io/img/ircam/ss7.png)
+![](https://static.wbinvd.org/img/ircam/ss7.png)
 
 The [C] key toggles between grayscale and the Turbo colormap. [I] inverts the
 sense of the display, and [G] toggles through gamma correction options.
 
-![](https://jcalvinowens.github.io/img/ircam/ss1.png)
+![](https://static.wbinvd.org/img/ircam/ss1.png)
 
 The [Y] key enables "contouring": this repeats the colormap N times through the
 current view dynamic range instead of just once, allowing you to visualize more
 than eight bits on your 8-bit display.
 
-![](https://jcalvinowens.github.io/img/ircam/ss5.png)
+![](https://static.wbinvd.org/img/ircam/ss5.png)
 
 Dynamic range (or exposure) starts in AUTO mode. Pressing [E] at any time will
 revert to AUTO. Pressing [D] enters manual mode, pinning the min/max of the view
 dynamic range at their current values.
 
-![](https://jcalvinowens.github.io/img/ircam/ss2.png)
+![](https://static.wbinvd.org/img/ircam/ss2.png)
 
 In manual mode, [Q] and [A] raise and lower the minimum view dynamic range. The
 [W] and [S] keys do the same for the maximum view dynamic range. The [Z] and [X]
 keys pin the ranges at their absolute minimum/maximum.
 
-![](https://jcalvinowens.github.io/img/ircam/ss3.png)
+![](https://static.wbinvd.org/img/ircam/ss3.png)
 
 The [T] key toggles the onscreen text between white, black, and off (it is never
 recorded), and the [F] key will toggle units between Celsius and Fahrenheit.
 
-![](https://jcalvinowens.github.io/img/ircam/ss9.png)
+![](https://static.wbinvd.org/img/ircam/ss9.png)
 
 The arrow keys move the cross, which is where the point temperature is from.
 
-![](https://jcalvinowens.github.io/img/ircam/ss10.png)
+![](https://static.wbinvd.org/img/ircam/ss10.png)
 
 Recording
 ---------
@@ -124,7 +124,7 @@ The generated Matroska files should be compatible with anything that understands
 FFV1 video compression, but due to how compressed the useful dynamic range of
 the image becomes, they look incorrect at first glance:
 
-![](https://jcalvinowens.github.io/img/ircam/ss6.png)
+![](https://static.wbinvd.org/img/ircam/ss6.png)
 
 The [V] key begins RGB recording, which exports the actual view you see in the
 window at the time.
