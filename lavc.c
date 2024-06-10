@@ -39,6 +39,7 @@ struct lavc_ctx {
 	AVFormatContext *fctx;
 	AVCodecContext *ctx;
 	AVFrame *frame;
+	int pts_mult;
 	bool queued;
 };
 
@@ -80,6 +81,7 @@ struct lavc_ctx *lavc_start_encode(const char *path, int width, int height,
 	c->ctx->time_base = (AVRational){1, 1000};
 	c->ctx->framerate = (AVRational){fps, 1};
 	c->ctx->pix_fmt = pix_fmt;
+	c->pts_mult = 1000 / fps;
 
 	if (avcodec_open2(c->ctx, c->codec, NULL))
 		errx(1, "can't open codec");
@@ -116,7 +118,7 @@ int lavc_encode(struct lavc_ctx *c, uint32_t pts, const uint8_t *data, int len)
 		if (av_frame_make_writable(c->frame))
 			errx(1, "can't make frame writable");
 
-		c->frame->pts = pts * 40;
+		c->frame->pts = pts * c->pts_mult;
 		memcpy(c->frame->data[0], data, len);
 	}
 
@@ -137,9 +139,9 @@ int lavc_encode(struct lavc_ctx *c, uint32_t pts, const uint8_t *data, int len)
 			}
 		}
 
-		c->pkt->pts = pts * 40;
-		c->pkt->dts = pts * 40;
-		c->pkt->duration = 40;
+		c->pkt->pts = pts * c->pts_mult;
+		c->pkt->dts = pts * c->pts_mult;
+		c->pkt->duration = c->pts_mult;
 		if (av_interleaved_write_frame(c->fctx, c->pkt) < 0)
 			errx(1, "can't write encoded data");
 	}
