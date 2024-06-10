@@ -18,11 +18,11 @@ debug: CFLAGS += -g -Og -fsanitize=address
 debug: all
 
 disasm: CFLAGS += -fverbose-asm
-disasm: main.s sdl.s v4l2.s lavc.s fontcache.s
+disasm: main.s sdl.s v4l2.s lavc.s inet.s fontcache.s
 
 sdl.s: gamma.h
 sdl.o: gamma.h
-ircam: main.o sdl.o v4l2.o lavc.o fontcache.o fonts/deja_vu_sans_mono.o
+ircam: main.o sdl.o v4l2.o lavc.o inet.o fontcache.o fonts/deja_vu_sans_mono.o
 	$(CC) -o $@ $^ $(CFLAGS) $(LFLAGS)
 
 util/kfwd: util/kfwd.o

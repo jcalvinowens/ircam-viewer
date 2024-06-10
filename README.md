@@ -8,6 +8,7 @@ A lightweight GUI for viewing and recording output from USB infrared cameras.
 Features include:
 
 * FFV1 lossless 16-bit video recording
+* Native support for remote viewing over the network
 * Full manual control of view dynamic range in software
 * Runs both under X and as a standalone program
 * Font caching using [SDL_FontCache](https://github.com/grimfang4/SDL_FontCache)
@@ -148,6 +149,25 @@ recorded for each pixel in each frame.
 During playback, the spacebar pauses the video. Pause timings are included in
 RGB recorded video. RGB recording will always end when the video loops. 16-bit
 recording is not supported in playback mode.
+
+Remote Viewing
+--------------
+
+You can plug your IR camera into a headless system, and connect and view the
+output with all the usual features from another.
+
+On the system with the camera attached, run:
+
+`$ ./ircam -l`
+
+Then, connect to its IP address from the other system:
+
+`$ ./ircam -c 1.2.3.4`
+
+...replacing '1.2.3.4' with the appropriate address on your network.
+
+Any recorded video is stored locally as usual. It is possible to combine both
+-l and -n, but the recording will not begin until a remote client connects.
 
 Converting Video
 ----------------

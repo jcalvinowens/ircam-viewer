@@ -35,11 +35,13 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/timerfd.h>
+#include <arpa/inet.h>
 
 #include "dev.h"
 #include "v4l2.h"
 #include "lavc.h"
 #include "sdl.h"
+#include "inet.h"
 
 extern const uint8_t _binary_fonts_deja_vu_sans_mono_ttf_start;
 extern const uint8_t _binary_fonts_deja_vu_sans_mono_ttf_end;
@@ -49,6 +51,8 @@ static struct lavc_ctx *record;
 static int window_width = 1440;
 static int window_height = 1080;
 static const char *fontpath;
+static int listen_only;
+static FILE *remote_socket;
 
 static sig_atomic_t stop;
 
@@ -111,6 +115,11 @@ static void run_v4l2(struct sdl_ctx *ctx, const char *devpath)
 		if (record)
 			if (lavc_encode(record, buf.sequence, data, ISIZE))
 				err(1, "can't record");
+
+		if (remote_socket) {
+			if (fwrite(data, 1, ISIZE, remote_socket) != ISIZE)
+				err(1, "remote socket not accepting data");
+		}
 
 		if (ctx) {
 			char path[PATH_MAX];
@@ -192,6 +201,40 @@ out:
 	lavc_end_decode(in_ctx);
 }
 
+static void run_remote(struct sdl_ctx *ctx, const struct sockaddr_in6 *src)
+{
+	uint32_t seq = 0;
+	int fd;
+
+	fd = get_stream_connect(src);
+	if (fd == -1)
+		errx(1, "Can't connect");
+
+	while (!stop) {
+		uint8_t data[ISIZE];
+		size_t off = 0;
+		ssize_t ret;
+
+		do {
+			ret = read(fd, data + off, ISIZE - off);
+			if (ret <= 0)
+				break;
+
+		} while ((off += ret) < ISIZE);
+
+		if (off != ISIZE)
+			goto out;
+
+		switch (paint_frame(ctx, ++seq, data)) {
+		case QUIT_PROGRAM:
+			goto out;
+		}
+	}
+
+out:
+	close(fd);
+}
+
 __attribute__((noreturn)) static void show_help_and_die(void)
 {
 	puts("usage: ./ircam <-p recfile | -d dev [-n]> [-f fontpath] "
@@ -211,6 +254,8 @@ int main(int argc, char **argv)
 		{ "font", required_argument, NULL, 'f' },
 		{ NULL, 0, NULL, 0 },
 	};
+	char v4[strlen("::ffff:XXX.XXX.XXX.XXX") + 1];
+	struct sockaddr_in6 video_srcaddr = {0};
 	struct sigaction ignore_action = {
 		.sa_handler = SIG_IGN,
 	};
@@ -228,7 +273,7 @@ int main(int argc, char **argv)
 	sigaction(SIGHUP, &ignore_action, NULL);
 
 	while (1) {
-		int i = getopt_long(argc, argv, "hd:p:nw:f:", opts, NULL);
+		int i = getopt_long(argc, argv, "hd:p:nw:f:lc:", opts, NULL);
 
 		switch (i) {
 		case 'd':
@@ -250,6 +295,21 @@ int main(int argc, char **argv)
 
 			fontpath = strdup(optarg);
 			break;
+		case 'l':
+			listen_only = 1;
+			break;
+		case 'c':
+			video_srcaddr.sin6_family = AF_INET6;
+			if (inet_pton(AF_INET6, optarg,
+				      &video_srcaddr.sin6_addr) == 1)
+				break;
+
+			snprintf(v4, sizeof(v4), "::ffff:%s", optarg);
+			if (inet_pton(AF_INET6, v4,
+				      &video_srcaddr.sin6_addr) == 1)
+				break;
+
+			errx(1, "Can't parse address '%s'", optarg);
 		case 'h':
 		default:
 			show_help_and_die();
@@ -259,18 +319,34 @@ int main(int argc, char **argv)
 	}
 done:
 
-	if (!v4l2dev && !filepath)
+	if (!v4l2dev && !filepath && !video_srcaddr.sin6_family)
 		v4l2dev = "/dev/video0";
 
 	if (v4l2dev && filepath)
 		show_help_and_die();
 
-	if (record_only) {
-		char path[PATH_MAX];
+	if (v4l2dev && video_srcaddr.sin6_family)
+		show_help_and_die();
 
-		snprintf(path, sizeof(path), "%ld-raw.mkv", time(NULL));
-		record = lavc_start_encode(path, WIDTH, HEIGHT, FPS,
-					   AV_PIX_FMT_GRAY16LE);
+	if (filepath && video_srcaddr.sin6_family)
+		show_help_and_die();
+
+	if (record_only || listen_only) {
+		if (record_only) {
+			char path[PATH_MAX];
+
+			snprintf(path, sizeof(path), "%ld-raw.mkv", time(NULL));
+			record = lavc_start_encode(path, WIDTH, HEIGHT, FPS,
+						   AV_PIX_FMT_GRAY16LE);
+		}
+
+		if (listen_only) {
+			remote_socket = fdopen(get_stream_listen_one(8888),
+					       "w");
+			if (!remote_socket)
+				err(1, "Error on remote socket");
+		}
+
 		run_v4l2(NULL, v4l2dev);
 		goto out;
 	}
@@ -293,10 +369,14 @@ done:
 	if (!ctx)
 		errx(1, "can't initialize libsdl");
 
-	if (filepath)
+	if (filepath) {
 		run_playback(ctx, filepath);
-	else if (v4l2dev)
+	} else if (v4l2dev) {
 		run_v4l2(ctx, v4l2dev);
+	} else if (video_srcaddr.sin6_family) {
+		video_srcaddr.sin6_port = htons(8888);
+		run_remote(ctx, &video_srcaddr);
+	}
 
 	sdl_close(ctx);
 out:
