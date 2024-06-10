@@ -29,7 +29,7 @@ util/kfwd: util/kfwd.o
 	$(CC) -o $@ $^ $(CFLAGS)
 
 gamma.h:
-	./util/mkgamma.py > gamma.h
+	./util/gamma.py > gamma.h
 
 %.o: %.c
 	$(CC) $< $(CFLAGS) $(WFLAGS) -c -o $@

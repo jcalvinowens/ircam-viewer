@@ -395,7 +395,7 @@ static int sdl_poll_one(struct sdl_ctx *c, SDL_Event *evt, uint16_t min,
 			break;
 
 		case SDL_SCANCODE_G:
-			c->gammafactor = (c->gammafactor + 1) % nr_gamma_vals;
+			c->gammafactor = (c->gammafactor + 1) % nr_gammavals;
 			break;
 
 		case SDL_SCANCODE_R:
