@@ -471,6 +471,7 @@ static int sdl_poll_one(struct sdl_ctx *c, SDL_Event *evt, uint16_t min,
 int paint_frame(struct sdl_ctx *c, uint32_t seq, const uint8_t *data)
 {
 	uint16_t min = UINT16_MAX, max = 0, ptemp;
+	uint16_t orig_min, orig_max;
 	uint32_t multinv;
 	int ret = NOTHING;
 	int pitch, i, o;
@@ -493,6 +494,9 @@ int paint_frame(struct sdl_ctx *c, uint32_t seq, const uint8_t *data)
 
 	if (SDL_LockTexture(c->t, &rect, (void **)&memptr, &pitch))
 		return -1;
+
+	orig_max = max;
+	orig_min = min;
 
 	if (c->scale_max || c->scale_min) {
 		max = c->scale_max;
@@ -547,8 +551,8 @@ skippaint:
 		c->frame_paint_seq++;
 
 	if (c->showtext) {
-		showtexts(c, raw_to_celsius(max), raw_to_celsius(ptemp),
-			  raw_to_celsius(min), seq);
+		showtexts(c, raw_to_celsius(orig_max), raw_to_celsius(ptemp),
+			  raw_to_celsius(orig_min), seq);
 
 		SDL_RenderDrawLine(c->r, c->crosshair_x, c->crosshair_y - 2,
 				   c->crosshair_x, c->crosshair_y + 2);
