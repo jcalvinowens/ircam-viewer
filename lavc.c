@@ -42,29 +42,16 @@ struct lavc_ctx {
 	bool queued;
 };
 
-static time_t now(void)
+struct lavc_ctx *lavc_start_encode(const char *path, int width, int height,
+				   int fps, int pix_fmt)
 {
-	struct timespec t;
-
-	if (clock_gettime(CLOCK_REALTIME, &t))
-		err(1, "can't get time");
-
-	return t.tv_sec;
-}
-
-struct lavc_ctx *lavc_start_encode(int width, int height, int fps, int pix_fmt)
-{
-	char outpath[PATH_MAX];
 	struct lavc_ctx *c;
-	const char *tag;
 
 	c = calloc(1, sizeof(*c));
 	if (!c)
 		errx(1, "can't allocate lavc context");
 
-	tag = pix_fmt == AV_PIX_FMT_GRAY16LE ? "raw" : "rgb";
-	snprintf(outpath, sizeof(outpath), "%ld-%s.mkv", now(), tag);
-	avformat_alloc_output_context2(&c->fctx, NULL, NULL, outpath);
+	avformat_alloc_output_context2(&c->fctx, NULL, NULL, path);
 	if (!c->fctx)
 		errx(1, "can't allocate format context");
 
@@ -112,7 +99,7 @@ struct lavc_ctx *lavc_start_encode(int width, int height, int fps, int pix_fmt)
 		errx(1, "can't copy codec parameters");
 
 	if (!(c->fmt->flags & AVFMT_NOFILE))
-		if (avio_open(&c->fctx->pb, outpath, AVIO_FLAG_WRITE) < 0)
+		if (avio_open(&c->fctx->pb, path, AVIO_FLAG_WRITE) < 0)
 			err(1, "can't open record file");
 
 	if (avformat_write_header(c->fctx, NULL) < 0)

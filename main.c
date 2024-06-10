@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdbool.h>
+#include <limits.h>
 #include <stdint.h>
 #include <string.h>
 #include <signal.h>
@@ -29,7 +30,6 @@
 #include <err.h>
 #include <getopt.h>
 #include <poll.h>
-#include <fcntl.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <sys/types.h>
@@ -113,6 +113,8 @@ static void run_v4l2(struct sdl_ctx *ctx, const char *devpath)
 				err(1, "can't record");
 
 		if (ctx) {
+			char path[PATH_MAX];
+
 			switch (paint_frame(ctx, buf.sequence, data)) {
 			case TOGGLE_Y16_RECORD:
 				if (record) {
@@ -121,7 +123,11 @@ static void run_v4l2(struct sdl_ctx *ctx, const char *devpath)
 					break;
 				}
 
-				record = lavc_start_encode(WIDTH, HEIGHT, FPS,
+				snprintf(path, sizeof(path), "%ld-raw.mkv",
+					 time(NULL));
+
+				record = lavc_start_encode(path, WIDTH, HEIGHT,
+							   FPS,
 							   AV_PIX_FMT_GRAY16LE);
 				break;
 
@@ -260,7 +266,11 @@ done:
 		show_help_and_die();
 
 	if (record_only) {
-		record = lavc_start_encode(WIDTH, HEIGHT, FPS, AV_PIX_FMT_GRAY16LE);
+		char path[PATH_MAX];
+
+		snprintf(path, sizeof(path), "%ld-raw.mkv", time(NULL));
+		record = lavc_start_encode(path, WIDTH, HEIGHT, FPS,
+					   AV_PIX_FMT_GRAY16LE);
 		run_v4l2(NULL, v4l2dev);
 		goto out;
 	}

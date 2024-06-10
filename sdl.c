@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <limits.h>
 #include <stdint.h>
 #include <string.h>
 #include <signal.h>
@@ -301,6 +302,8 @@ static void sdl_open_fontcache(struct sdl_ctx *c)
 static int sdl_poll_one(struct sdl_ctx *c, SDL_Event *evt, uint16_t min,
 			uint16_t max)
 {
+	char path[PATH_MAX];
+
 	switch (evt->type) {
 	case SDL_KEYUP:
 		switch (evt->key.keysym.scancode) {
@@ -406,7 +409,8 @@ static int sdl_poll_one(struct sdl_ctx *c, SDL_Event *evt, uint16_t min,
 				break;
 			}
 
-			c->vrecord = lavc_start_encode(WIDTH, HEIGHT, FPS,
+			snprintf(path, sizeof(path), "%ld-rgb.mkv", time(NULL));
+			c->vrecord = lavc_start_encode(path, WIDTH, HEIGHT, FPS,
 						       AV_PIX_FMT_BGRA);
 			break;
 
