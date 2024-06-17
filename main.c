@@ -53,6 +53,7 @@ static int window_height = 1080;
 static const char *fontpath;
 static int listen_only;
 static FILE *remote_socket;
+static int hide_init_help;
 
 static sig_atomic_t stop;
 
@@ -238,7 +239,7 @@ out:
 __attribute__((noreturn)) static void show_help_and_die(void)
 {
 	puts("usage: ./ircam <-p recfile | -d dev [-n]> [-f fontpath] "
-	     "[-w XXXX]");
+	     "[-w XXXX] [-q]");
 
 	exit(1);
 }
@@ -252,6 +253,7 @@ int main(int argc, char **argv)
 		{ "width", required_argument, NULL, 'w' },
 		{ "record-only", no_argument, NULL, 'n' },
 		{ "font", required_argument, NULL, 'f' },
+		{ "quiet", no_argument, NULL, 'q' },
 		{ NULL, 0, NULL, 0 },
 	};
 	char v4[strlen("::ffff:XXX.XXX.XXX.XXX") + 1];
@@ -273,7 +275,7 @@ int main(int argc, char **argv)
 	sigaction(SIGHUP, &ignore_action, NULL);
 
 	while (1) {
-		int i = getopt_long(argc, argv, "hd:p:nw:f:lc:", opts, NULL);
+		int i = getopt_long(argc, argv, "hd:p:nw:f:lc:q", opts, NULL);
 
 		switch (i) {
 		case 'd':
@@ -310,6 +312,9 @@ int main(int argc, char **argv)
 				break;
 
 			errx(1, "Can't parse address '%s'", optarg);
+		case 'q':
+			hide_init_help = 1;
+			break;
 		case 'h':
 		default:
 			show_help_and_die();
@@ -365,7 +370,8 @@ done:
 		fontpath = strdup(tmp);
 	}
 
-	ctx = sdl_open(window_width, window_height, !!filepath, fontpath);
+	ctx = sdl_open(window_width, window_height, !!filepath, fontpath,
+		       hide_init_help);
 	if (!ctx)
 		errx(1, "can't initialize libsdl");
 

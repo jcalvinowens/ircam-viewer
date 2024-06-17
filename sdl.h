@@ -30,7 +30,7 @@ enum paint_frame_action {
 };
 
 struct sdl_ctx *sdl_open(int upscaled_width, int upscaled_height, bool pb,
-			 const char *fontpath);
+			 const char *fontpath, bool hidehelp);
 
 int paint_frame(struct sdl_ctx *c, uint32_t seq, const uint8_t *data);
 

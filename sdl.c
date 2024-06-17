@@ -167,6 +167,8 @@ struct sdl_ctx {
 	bool invert;
 	bool showhelp;
 	bool showlicense;
+	bool showinithelp;
+	time_t inittsmono;
 	uint16_t scale_max;
 	uint16_t scale_min;
 	int crosshair_x;
@@ -209,6 +211,16 @@ static void drawtext(struct sdl_ctx *c, int x, int y, const char *fmt, ...)
 	va_end(args);
 
 	FC_DrawScale(c->f, c->r, x, y, FC_MakeScale(0.2F, 0.2F), txt);
+}
+
+static time_t now_mono(void)
+{
+	struct timespec t;
+
+	if (clock_gettime(CLOCK_MONOTONIC_COARSE, &t))
+		err(1, "Bad clock_gettime");
+
+	return t.tv_sec;
 }
 
 static void showtexts(struct sdl_ctx *c, struct temp_fixp max,
@@ -262,7 +274,7 @@ static void showtexts(struct sdl_ctx *c, struct temp_fixp max,
 	drawtext(c, WIDTH - 45, 8,
 		 "% 5" PRId64 " DROPS", (int64_t)seq - c->frame_paint_seq);
 
-	if (!c->looped && c->frame_paint_seq < 25 * 5) {
+	if (c->showinithelp) {
 		drawtext(c, 90, 70, "HOLD [H] FOR HELP");
 		drawtext(c, 90, 84, "THIS PROGRAM COMES WITH");
 		drawtext(c, 90, 91, "ABSOLUTELY NO WARRANTY");
@@ -537,6 +549,9 @@ int paint_frame(struct sdl_ctx *c, uint32_t seq, const uint8_t *data)
 	if (SDL_LockTexture(c->t, &rect, (void **)&memptr, &pitch))
 		return -1;
 
+	if (c->showinithelp && now_mono() - c->inittsmono > 5)
+		c->showinithelp = false;
+
 	orig_max = max;
 	orig_min = min;
 
@@ -625,7 +640,7 @@ skippaint:
  * Return: SDL context handle on success, NULL on error.
  */
 struct sdl_ctx *sdl_open(int upscaled_width, int upscaled_height, bool pb,
-			 const char *fontpath)
+			 const char *fontpath, bool hidehelp)
 {
 	const char *window_name = "Linux V4L2/SDL2 IR Camera Viewer";
 	struct sdl_ctx *c;
@@ -637,6 +652,7 @@ struct sdl_ctx *sdl_open(int upscaled_width, int upscaled_height, bool pb,
 	if (!c)
 		return NULL;
 
+	c->inittsmono = now_mono();
 	c->pb = pb;
 	c->colormap = 1;
 	c->showtext = 1;
@@ -646,6 +662,9 @@ struct sdl_ctx *sdl_open(int upscaled_width, int upscaled_height, bool pb,
 	c->crosshair_y = HEIGHT / 2;
 	c->textval = 255;
 	c->fontpath = strdup(fontpath);
+
+	if (!hidehelp)
+		c->showinithelp = true;
 
 	c->w = SDL_CreateWindow(window_name, 0, 0, upscaled_width,
 				upscaled_height, SDL_WINDOW_SHOWN);
