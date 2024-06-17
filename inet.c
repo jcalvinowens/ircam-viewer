@@ -61,6 +61,15 @@ err:
 	return -1;
 }
 
+/**
+ * get_stream_listen_one() - Listen and accept a single TCP connection.
+ * @param port TCP port to listen on.
+ *
+ * Create a TCP listener on the specified port, accept a single
+ * connection, then immediately tear down the listener.
+ *
+ * Return: File descriptor for the new connection.
+ */
 int get_stream_listen_one(int port)
 {
 	int fd, nfd;
@@ -75,6 +84,12 @@ int get_stream_listen_one(int port)
 	return nfd;
 }
 
+/**
+ * get_stream_connect() - Connect to a remote TCP server.
+ * @param s sockaddr_in6 specifying the address/port to connect to.
+ *
+ * Return: File descriptor for the new connection.
+ */
 int get_stream_connect(const struct sockaddr_in6 *s)
 {
 	int fd;

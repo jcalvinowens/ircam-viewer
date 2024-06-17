@@ -118,6 +118,19 @@ static void v4l2_init_stream(struct v4l2_dev *dev)
 		err(1, "VIDIOC_STREAMON");
 }
 
+/**
+ * v4l2_open() - Open a video device and begin streaming.
+ * @param path Path of device to open (ex. "/dev/video0").
+ * @param fmt  The V4L2 pixel format to use (ex. V4L2_PIX_FMT_YUYV).
+ * @param width Frame width in pixels.
+ * @param height Frame height in pixels.
+ * @param fps Framerate, hz.
+ *
+ * See /usr/include/linux/videodev2.h for a list of V4L2 pixel format
+ * codes.
+ *
+ * Return: Running device handle if successful, NULL on failure.
+ */
 struct v4l2_dev *v4l2_open(const char *path, uint32_t fmt, int width,
 			   int height, int fps)
 {
@@ -150,6 +163,17 @@ struct v4l2_dev *v4l2_open(const char *path, uint32_t fmt, int width,
 	return dev;
 }
 
+/**
+ * v4l2_get_buffer() - Get a framebuffer from a running V4L2 device.
+ * @param dev Running V4L2 device handle.
+ * @param buf Output V4L2 buffer handle.
+ *
+ * Fetch the next available framebuffer. If no buffer is available,
+ * block until the next buffer becomes available. The buffer must freed
+ * by the user with v4l2_put_buffer().
+ *
+ * Return: 0 on success, 1 on error.
+ */
 int v4l2_get_buffer(struct v4l2_dev *dev, struct v4l2_buffer *buf)
 {
 	struct pollfd pfd = {0};
@@ -174,17 +198,45 @@ int v4l2_get_buffer(struct v4l2_dev *dev, struct v4l2_buffer *buf)
 	return 1;
 }
 
+/**
+ * v4l2_buf_mmap() - Get pointer to raw framebuffer data.
+ * @param dev Running V4L2 device handle.
+ * @param index Index of V4L2 buffer to return.
+ *
+ * FIXME: Take v4l2_buffer not index as second argument.
+ *
+ * Return: Pointer to the backing V4L2_MEMORY_MMAP framebuffer.
+ *
+ * The address returned by this function is only valid until
+ * v4l2_put_buffer() is called on the buffer handle.
+ */
 const uint8_t *v4l2_buf_mmap(struct v4l2_dev *dev, int index)
 {
 	return dev->mmaps[index];
 }
 
+/**
+ * v4l2_put_buffer() - Free a V4L2 framebuffer.
+ * @param dev Running V4L2 device handle.
+ * @param buf Buffer handle to free.
+ *
+ * Return the buffer's resources to the kernel, so they can be used to
+ * return a future frame.
+ *
+ * Return: Nothing.
+ */
 void v4l2_put_buffer(struct v4l2_dev *dev, const struct v4l2_buffer *buf)
 {
 	if (ioctl(dev->v4l2_fd, VIDIOC_QBUF, buf))
 		err(1, "VIDIOC_QBUF");
 }
 
+/**
+ * v4l2_open() - Halt streaming and close a V4L2 device.
+ * @param dev Running V4L2 device nahdle
+ *
+ * Return: Nothing.
+ */
 void v4l2_close(struct v4l2_dev *dev)
 {
 	int i;

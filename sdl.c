@@ -468,6 +468,16 @@ static int sdl_poll_one(struct sdl_ctx *c, SDL_Event *evt, uint16_t min,
 	return NOTHING;
 }
 
+/**
+ * paint_frame() - Paint a new frame in the SDL window.
+ * @param c SDL context handle.
+ * @param seq Sequence number of frame.
+ * @param data Pointer to raw framebuffer.
+ *
+ * The framebuffer is assumed to be Y16LE.
+ *
+ * Return: A paint_frame_action to be taken by the caller.
+ */
 int paint_frame(struct sdl_ctx *c, uint32_t seq, const uint8_t *data)
 {
 	uint16_t min = UINT16_MAX, max = 0, ptemp;
@@ -571,6 +581,15 @@ skippaint:
 	return ret;
 }
 
+/**
+ * sdl_open() - Create a new SDL window.
+ * @param upscaled_width Real pixel width of window on desktop.
+ * @param upscaled_heigth Real pixel height of window on desktop.
+ * @param pb True for playback mode.
+ * @param fontpath Path to font for rendering text.
+ *
+ * Return: SDL context handle on success, NULL on error.
+ */
 struct sdl_ctx *sdl_open(int upscaled_width, int upscaled_height, bool pb,
 			 const char *fontpath)
 {
@@ -612,6 +631,12 @@ struct sdl_ctx *sdl_open(int upscaled_width, int upscaled_height, bool pb,
 	return c;
 }
 
+/**
+ * sdl_close() - Shutdown an SDL window.
+ * @param c SDL context handle.
+ *
+ * Return: Nothing.
+ */
 void sdl_close(struct sdl_ctx *c)
 {
 	SDL_DestroyTexture(c->t);
@@ -624,6 +649,15 @@ void sdl_close(struct sdl_ctx *c)
 	free(c);
 }
 
+/**
+ * sdl_loop() - Indicate to SDL the playback has looped.
+ * @param c SDL context handle.
+ *
+ * This ends vrecording, and sets a flag so when the sequence numbers
+ * restart the initial help message is not displayed again.
+ *
+ * Return: Nothing.
+ */
 void sdl_loop(struct sdl_ctx *c)
 {
 	c->looped = 1;

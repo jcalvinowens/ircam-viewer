@@ -43,6 +43,21 @@ struct lavc_ctx {
 	bool queued;
 };
 
+/**
+ * lavc_start_encode() - Initialize a handle for encoding a raw video
+ *			 stream to a file.
+ *
+ * @param path Path to file to write encoded output to.
+ * @param width Width of video frame.
+ * @param height Height of video frame.
+ * @param fps Framerate in frames per second.
+ * @param pix_fmt FFMPEG pixel format code.
+ *
+ * Note that the FFMPEG pixel format codes are differnt than the V4L2
+ * codes!
+ *
+ * Return: Handle for stream.
+ */
 struct lavc_ctx *lavc_start_encode(const char *path, int width, int height,
 				   int fps, int pix_fmt)
 {
@@ -110,6 +125,15 @@ struct lavc_ctx *lavc_start_encode(const char *path, int width, int height,
 	return c;
 }
 
+/**
+ * lavc_encode() - Push a framebuffer to the encoder.
+ * @param c LAVC context handle.
+ * @param pts PTS value for frame.
+ * @param data Pointer to raw framebuffer.
+ * @param len Length of framebuffer data.
+ *
+ * Return: 0 on success, non-zero on error.
+ */
 int lavc_encode(struct lavc_ctx *c, uint32_t pts, const uint8_t *data, int len)
 {
 	int r;
@@ -149,6 +173,12 @@ int lavc_encode(struct lavc_ctx *c, uint32_t pts, const uint8_t *data, int len)
 	return r;
 }
 
+/**
+ * lavc_end_encode() - Shutdown an encoding stream.
+ * @param c LAVC context handle.
+ *
+ * Return: Nothing.
+ */
 void lavc_end_encode(struct lavc_ctx *c)
 {
 	av_write_trailer(c->fctx);
@@ -163,6 +193,14 @@ void lavc_end_encode(struct lavc_ctx *c)
 	free(c);
 }
 
+/**
+ * lavc_start_decode() - Initialize a handle for decoding a compressed
+ *			 video stream from a file.
+ *
+ * @param path Path to file containing encoded video.
+ *
+ * Return: Handle for the stream.
+ */
 struct lavc_ctx *lavc_start_decode(const char *path)
 {
 	struct lavc_ctx *c;
@@ -216,6 +254,17 @@ struct lavc_ctx *lavc_start_decode(const char *path)
 	return c;
 }
 
+/**
+ * lavc_decode() - Decode the next frame in an encoded stream.
+ * @param c LAVC context handle.
+ *
+ * Call this function repeatedly until it returns NULL on EOF.
+ *
+ * Return: Pointer to raw framebuffer containing decoded data.
+ *
+ * The pointer returned by this function is only valid until the next
+ * call to this function, or the next call to lavc_decode_loop().
+ */
 const uint8_t *lavc_decode(struct lavc_ctx *c)
 {
 	int ret;
@@ -247,6 +296,15 @@ again:
 	return c->frame->data[0];
 }
 
+/**
+ * lavc_decode_loop() - Loop a decoding stream back to the beginning.
+ * @param c LAVC context handle.
+ *
+ * After this function, lavc_decode() will begin returning frames from
+ * the beginning of the file again, until EOF.
+ *
+ * Return: Nothing.
+ */
 void lavc_decode_loop(struct lavc_ctx *c)
 {
 	av_frame_unref(c->frame);
@@ -254,6 +312,12 @@ void lavc_decode_loop(struct lavc_ctx *c)
 	c->queued = 0;
 }
 
+/**
+ * lavc_end_decode() - Shutdown a decoding stream.
+ * @param c LAVC context handle.
+ *
+ * Return: Nothing.
+ */
 void lavc_end_decode(struct lavc_ctx *c)
 {
 	avcodec_close(c->ctx);

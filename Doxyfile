@@ -1,0 +1,15 @@
+DOXYFILE_ENCODING      = UTF-8
+PROJECT_NAME           = "ircam-viewer"
+PROJECT_BRIEF          = "Linux IR Camera Viewer"
+OUTPUT_DIRECTORY       = "doc"
+CREATE_SUBDIRS         = NO
+OPTIMIZE_OUTPUT_FOR_C  = YES
+OPTIMIZE_OUTPUT_JAVA   = NO
+OPTIMIZE_FOR_FORTRAN   = NO
+OPTIMIZE_OUTPUT_VHDL   = NO
+OPTIMIZE_OUTPUT_SLICE  = NO
+EXTRACT_ALL            = YES
+SHOW_INCLUDE_FILES     = NO
+FILE_PATTERNS          = *.c *.h *.md *.py
+RECURSIVE              = YES
+DOCSET_FEEDNAME        = "ircam-viewer docs"

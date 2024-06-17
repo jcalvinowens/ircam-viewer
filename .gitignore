@@ -4,3 +4,4 @@ gamma.h
 *.o
 *.s
 *.mkv
+doc/*
