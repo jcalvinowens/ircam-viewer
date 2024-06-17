@@ -166,6 +166,7 @@ struct sdl_ctx {
 	int contours;
 	bool invert;
 	bool showhelp;
+	bool showlicense;
 	uint16_t scale_max;
 	uint16_t scale_min;
 	int crosshair_x;
@@ -261,8 +262,33 @@ static void showtexts(struct sdl_ctx *c, struct temp_fixp max,
 	drawtext(c, WIDTH - 45, 8,
 		 "% 5" PRId64 " DROPS", (int64_t)seq - c->frame_paint_seq);
 
-	if (!c->looped && c->frame_paint_seq < 25 * 5)
-		drawtext(c, 140, 30, "HOLD [H] FOR HELP");
+	if (!c->looped && c->frame_paint_seq < 25 * 5) {
+		drawtext(c, 90, 70, "HOLD [H] FOR HELP");
+		drawtext(c, 90, 84, "THIS PROGRAM COMES WITH");
+		drawtext(c, 90, 91, "ABSOLUTELY NO WARRANTY");
+		drawtext(c, 90, 98, "HOLD [L] FOR LICENSE");
+	}
+}
+
+static void showlicensetext(struct sdl_ctx *c)
+{
+	drawtext(c, 40,  33, "Linux Infrared Camera Viewer");
+	drawtext(c, 40,  40, "Copyright (C) 2024 Calvin Owens");
+	drawtext(c, 40,  54, "This program is free software: you can");
+	drawtext(c, 40,  61, "redistribute it and/or modify it under the");
+	drawtext(c, 40,  68, "terms of the GNU General Public License as");
+	drawtext(c, 40,  75, "published by the Free Software Foundation,");
+	drawtext(c, 40,  82, "either version 3 of the License, or (at");
+	drawtext(c, 40,  89, "your option) any later version.");
+	drawtext(c, 40, 103, "This program is distributed in the hope that");
+	drawtext(c, 40, 110, "it will be useful, but WITHOUT ANY WARRANTY;");
+	drawtext(c, 40, 117, "without even the implied warranty of");
+	drawtext(c, 40, 124, "MERCHANTABILITY or FITNESS FOR A PARTICULAR");
+	drawtext(c, 40, 131, "PURPOSE. See the GNU General Public License");
+	drawtext(c, 40, 138, "for more details.");
+	drawtext(c, 40, 152, "You should have received a copy of the GNU");
+	drawtext(c, 40, 159, "General Public License along with this");
+	drawtext(c, 40, 166, "program. If not see <www.gnu.org/licenses>.");
 }
 
 static void showhelptext(struct sdl_ctx *c)
@@ -283,6 +309,8 @@ static void showhelptext(struct sdl_ctx *c)
 	drawtext(c, 40, 121, "C: TOGGLE GRAYSCALE");
 	drawtext(c, 40, 128, "ARROW KEYS MOVE CROSS");
 	drawtext(c, 40, 135, "SPACEBAR PAUSES PLAYBACK");
+	drawtext(c, 40, 142, "L: SHOW LICENSE DETAILS");
+	drawtext(c, 40, 149, "H: SHOW THIS HELP TEXT");
 }
 
 static void sdl_open_fontcache(struct sdl_ctx *c)
@@ -306,6 +334,10 @@ static int sdl_poll_one(struct sdl_ctx *c, SDL_Event *evt, uint16_t min,
 		case SDL_SCANCODE_H:
 			c->showhelp = 0;
 			break;
+
+		case SDL_SCANCODE_L:
+			c->showlicense = 0;
+			break;
 		}
 
 		break;
@@ -314,6 +346,10 @@ static int sdl_poll_one(struct sdl_ctx *c, SDL_Event *evt, uint16_t min,
 		switch (evt->key.keysym.scancode) {
 		case SDL_SCANCODE_H:
 			c->showhelp = 1;
+			break;
+
+		case SDL_SCANCODE_L:
+			c->showlicense = 1;
 			break;
 
 		case SDL_SCANCODE_C:
@@ -568,6 +604,8 @@ skippaint:
 
 	if (c->showhelp)
 		showhelptext(c);
+	else if (c->showlicense)
+		showlicensetext(c);
 
 	SDL_RenderPresent(c->r);
 
