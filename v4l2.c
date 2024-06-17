@@ -201,18 +201,17 @@ int v4l2_get_buffer(struct v4l2_dev *dev, struct v4l2_buffer *buf)
 /**
  * v4l2_buf_mmap() - Get pointer to raw framebuffer data.
  * @param dev Running V4L2 device handle.
- * @param index Index of V4L2 buffer to return.
- *
- * FIXME: Take v4l2_buffer not index as second argument.
+ * @param buf V4L2 buffer with desired frame.
  *
  * Return: Pointer to the backing V4L2_MEMORY_MMAP framebuffer.
  *
  * The address returned by this function is only valid until
  * v4l2_put_buffer() is called on the buffer handle.
  */
-const uint8_t *v4l2_buf_mmap(struct v4l2_dev *dev, int index)
+const uint8_t *v4l2_buf_mmap(const struct v4l2_dev *dev,
+			     const struct v4l2_buffer *buf)
 {
-	return dev->mmaps[index];
+	return dev->mmaps[buf->index];
 }
 
 /**

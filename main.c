@@ -110,7 +110,7 @@ static void run_v4l2(struct sdl_ctx *ctx, const char *devpath)
 			      "different one", buf.bytesused, ISIZE * 2,
 			      devpath);
 
-		data = v4l2_buf_mmap(dev, buf.index) + ISKIP;
+		data = v4l2_buf_mmap(dev, &buf) + ISKIP;
 
 		if (record)
 			if (lavc_encode(record, buf.sequence, data, ISIZE))

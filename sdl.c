@@ -59,15 +59,11 @@
  */
 #include "gamma.h"
 
-static const char *window_name = "Linux V4L2/SDL2 IR Camera Viewer";
-
 /*
- * Decimal lookup tables for temp_fixp to hundredths
+ * Decimal lookup tables for temp_fixp to hundredths:
  *
  *	python3 -c 'print([int(round(i / 64 * 100, 0)) for i in range(64)])'
  *	python3 -c 'print([int(round(i / 100 * 64, 0)) for i in range(100)])'
- *
- * FIXME: Naive rounding probably isn't ideal, but it doesn't matter very much.
  */
 
 static const uint8_t b10lookup[64] = {
@@ -593,6 +589,7 @@ skippaint:
 struct sdl_ctx *sdl_open(int upscaled_width, int upscaled_height, bool pb,
 			 const char *fontpath)
 {
+	const char *window_name = "Linux V4L2/SDL2 IR Camera Viewer";
 	struct sdl_ctx *c;
 
 	if (access(fontpath, R_OK))

@@ -26,7 +26,8 @@ struct v4l2_dev *v4l2_open(const char *path, uint32_t fmt, int w, int h, int f);
 
 int v4l2_get_buffer(struct v4l2_dev *dev, struct v4l2_buffer *buf);
 
-const uint8_t *v4l2_buf_mmap(struct v4l2_dev *dev, int index);
+const uint8_t *v4l2_buf_mmap(const struct v4l2_dev *dev,
+			     const struct v4l2_buffer *buf);
 
 void v4l2_put_buffer(struct v4l2_dev *dev, const struct v4l2_buffer *buf);
 
