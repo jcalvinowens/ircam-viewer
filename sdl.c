@@ -589,7 +589,7 @@ skippaint:
 	SDL_UnlockTexture(c->t);
 	SDL_RenderCopy(c->r, c->t, &rect, &rect);
 
-	if (!c->paused)
+	if (!(c->pb && c->paused))
 		c->frame_paint_seq++;
 
 	if (c->showtext) {
