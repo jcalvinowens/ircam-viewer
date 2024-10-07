@@ -43,9 +43,6 @@
 #include "sdl.h"
 #include "inet.h"
 
-extern const uint8_t _binary_fonts_deja_vu_sans_mono_ttf_start;
-extern const uint8_t _binary_fonts_deja_vu_sans_mono_ttf_end;
-
 static int record_only;
 static struct lavc_ctx *record;
 static int window_width = 1440;
@@ -264,7 +261,6 @@ int main(int argc, char **argv)
 	struct sigaction stop_action = {
 		.sa_handler = stopper,
 	};
-	FILE *font_tmpfile = NULL;
 	char *v4l2dev = NULL;
 	char *filepath = NULL;
 	struct sdl_ctx *ctx;
@@ -356,20 +352,6 @@ done:
 		goto out;
 	}
 
-	if (!fontpath) {
-		const uint8_t *src = &_binary_fonts_deja_vu_sans_mono_ttf_start;
-		size_t len = &_binary_fonts_deja_vu_sans_mono_ttf_end - src;
-		char tmp[4096];
-
-		font_tmpfile = tmpfile();
-		if (fwrite(src, 1, len, font_tmpfile) != len)
-			err(1, "can't initialize built-in font, try -f");
-
-		snprintf(tmp, sizeof(tmp), "/proc/self/fd/%d",
-			 fileno(font_tmpfile));
-		fontpath = strdup(tmp);
-	}
-
 	ctx = sdl_open(window_width, window_height, !!filepath, fontpath,
 		       hide_init_help);
 	if (!ctx)
@@ -386,9 +368,6 @@ done:
 
 	sdl_close(ctx);
 out:
-	if (font_tmpfile)
-		fclose(font_tmpfile);
-
 	free((void *)fontpath);
 	free(v4l2dev);
 	free(filepath);

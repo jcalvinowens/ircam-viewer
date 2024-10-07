@@ -29,6 +29,8 @@ enum paint_frame_action {
 	QUIT_PROGRAM,
 };
 
+#ifndef IRCAM_NOSDL
+
 struct sdl_ctx *sdl_open(int upscaled_width, int upscaled_height, bool pb,
 			 const char *fontpath, bool hidehelp);
 
@@ -37,3 +39,25 @@ int paint_frame(struct sdl_ctx *c, uint32_t seq, const uint8_t *data);
 void sdl_loop(struct sdl_ctx *c);
 
 void sdl_close(struct sdl_ctx *c);
+
+#else
+
+struct sdl_ctx {
+	bool unused;
+};
+
+static struct sdl_ctx *sdl_open(int upscaled_width, int upscaled_height,
+				bool pb, const char *fontpath, bool hidehelp)
+{
+	return (void *)0xdecafbadULL;
+}
+
+static int paint_frame(struct sdl_ctx *c, uint32_t seq, const uint8_t *data)
+{
+	return NOTHING;
+}
+
+static void sdl_loop(struct sdl_ctx *c) {}
+static void sdl_close(struct sdl_ctx *c) {}
+
+#endif /* IRCAM_NOSDL */

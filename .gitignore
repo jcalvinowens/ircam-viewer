@@ -1,4 +1,5 @@
 ircam
+ircam-nosdl
 kfwd
 gamma.h
 *.o

@@ -11,9 +11,9 @@ WFLAGS = -Wall -Wextra -Wstrict-prototypes -Wmissing-prototypes -Wno-switch \
 	 -Wformat=2 -Wstrict-aliasing -Wno-unknown-warning-option \
 	 -Wno-format-nonliteral -Wpedantic
 
-LFLAGS = -lSDL2 -lSDL2_ttf -lavcodec -lavutil -lavformat
-
 all: ircam util/kfwd
+nosdl: ircam-nosdl
+
 debug: CFLAGS += -g -Og -fsanitize=address
 debug: all
 
@@ -22,8 +22,13 @@ disasm: main.s sdl.s v4l2.s lavc.s inet.s fontcache.s
 
 sdl.s: gamma.h
 sdl.o: gamma.h
-ircam: main.o sdl.o v4l2.o lavc.o inet.o fontcache.o fonts/deja_vu_sans_mono.o
-	$(CC) -o $@ $^ $(CFLAGS) $(LFLAGS)
+
+ircam: main.o v4l2.o lavc.o inet.o sdl.o fontcache.o fonts/deja_vu_sans_mono.o
+	$(CC) -o $@ $^ $(CFLAGS) -lSDL2 -lSDL2_ttf -lavcodec -lavutil -lavformat
+
+ircam-nosdl: CFLAGS += -DIRCAM_NOSDL -Wno-unused-parameter
+ircam-nosdl: main.o v4l2.o lavc.o inet.o
+	$(CC) -o $@ $^ $(CFLAGS) -lavcodec -lavutil -lavformat
 
 util/kfwd: util/kfwd.o
 	$(CC) -o $@ $^ $(CFLAGS)
@@ -45,4 +50,4 @@ fontcache.o: fontcache.c
 	$(CC) $< $(CFLAGS) -c -o $@
 
 clean:
-	rm -f ircam util/kfwd *.o *.s fonts/*.o util/*.o util/*.s gamma.h
+	rm -f ircam ircam-nosdl util/kfwd *.o *.s fonts/*.o util/*.o util/*.s gamma.h

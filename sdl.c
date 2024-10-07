@@ -49,6 +49,9 @@
  */
 #include "fontcache.h"
 
+extern const uint8_t _binary_fonts_deja_vu_sans_mono_ttf_start;
+extern const uint8_t _binary_fonts_deja_vu_sans_mono_ttf_end;
+
 /*
  * Lookup table for the Turbo colormap (see README).
  */
@@ -159,6 +162,7 @@ struct sdl_ctx {
 	SDL_Window *w;
 	FC_Font *f;
 	const char *fontpath;
+	FILE *fonttmp;
 	bool colormap;
 	bool showtext;
 	bool fahren;
@@ -643,7 +647,22 @@ struct sdl_ctx *sdl_open(int upscaled_width, int upscaled_height, bool pb,
 			 const char *fontpath, bool hidehelp)
 {
 	const char *window_name = "Linux V4L2/SDL2 IR Camera Viewer";
+	FILE *font_tmpfile = NULL;
 	struct sdl_ctx *c;
+	char tmp[32];
+
+	if (!fontpath) {
+		const uint8_t *src = &_binary_fonts_deja_vu_sans_mono_ttf_start;
+		size_t len = &_binary_fonts_deja_vu_sans_mono_ttf_end - src;
+
+		font_tmpfile = tmpfile();
+		if (fwrite(src, 1, len, font_tmpfile) != len)
+			err(1, "can't initialize built-in font, try -f");
+
+		snprintf(tmp, sizeof(tmp), "/proc/self/fd/%d",
+			 fileno(font_tmpfile));
+		fontpath = tmp;
+	}
 
 	if (access(fontpath, R_OK))
 		err(1, "can't read '%s': pass a path to a valid font with '-f'", fontpath);
@@ -662,6 +681,7 @@ struct sdl_ctx *sdl_open(int upscaled_width, int upscaled_height, bool pb,
 	c->crosshair_y = HEIGHT / 2;
 	c->textval = 255;
 	c->fontpath = strdup(fontpath);
+	c->fonttmp = font_tmpfile;
 
 	if (!hidehelp)
 		c->showinithelp = true;
@@ -700,6 +720,10 @@ void sdl_close(struct sdl_ctx *c)
 	FC_FreeFont(c->f);
 	free((void *)c->fontpath);
 	TTF_Quit();
+
+	if (c->fonttmp)
+		fclose(c->fonttmp);
+
 	free(c);
 }
 
