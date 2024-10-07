@@ -321,7 +321,7 @@ int main(int argc, char **argv)
 done:
 
 	if (!v4l2dev && !filepath && !video_srcaddr.sin6_family)
-		v4l2dev = "/dev/video0";
+		v4l2dev = strdup("/dev/video0");
 
 	if (v4l2dev && filepath)
 		show_help_and_die();
