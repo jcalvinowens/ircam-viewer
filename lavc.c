@@ -187,7 +187,6 @@ void lavc_end_encode(struct lavc_ctx *c)
 
 	avformat_free_context(c->fctx);
 	av_packet_free(&c->pkt);
-	avcodec_close(c->ctx);
 	avcodec_free_context(&c->ctx);
 	av_frame_free(&c->frame);
 	free(c);
@@ -320,7 +319,6 @@ void lavc_decode_loop(struct lavc_ctx *c)
  */
 void lavc_end_decode(struct lavc_ctx *c)
 {
-	avcodec_close(c->ctx);
 	avcodec_free_context(&c->ctx);
 	avformat_close_input(&c->fctx);
 	av_packet_free(&c->pkt);
