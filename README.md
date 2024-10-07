@@ -15,41 +15,20 @@ Features include:
 * Precomputed gamma correction lookup tables
 * Fixed point arithmetic
 
-I hacked this together to make better use of the TOPDON TC001, a (relatively)
-cheap 256x192 25hz USB infrared camera designed to be plugged into a cell phone.
+These IR camera models are known to be supported:
 
-The exact hardware: https://www.amazon.com/dp/B0C23Z42KX
+* A-BF RX-450
+* TOPDON TC001
 
-My goal was to write something fast enough to render the video in real time with
-1080p upscaling on a Raspberry Pi Zero W (the older single core ARMv6 without
-hardware division).
+If your camera works but isn't in the list above, please file a PR on github or
+codeberg to add it.
 
-It works!
+If your camera doesn't work, and you're willing to do some homework for me to
+help me get it working, please open an issue on Github and provide the complete
+output from `strace -vvv -e ioctl ./ircam 2>&1 | grep -v DRM | head -n20`, and
+from `ffmpeg -f v4l2 -list_formats all -i /dev/videoX`.
 
-![](https://static.wbinvd.org/img/ircam/pi-1.jpg)
-
-My initial implementation relied on the BCM2835 hardware floating point support,
-and pegged the CPU at 10fps on the Zero. Converting that floating point
-arithmetic to fixed point and/or lookup tables improved it to 20fps.
-
-Using [SDL_FontCache](https://github.com/grimfang4/SDL_FontCache)
-to render the text finally got it to 25fps, but it was so close to the edge that
-simply pinging the Pi from my laptop would make it drop frames!
-
-The final optimization was to refactor the scaling math: each frame requires a
-division for each pixel
-([code](https://github.com/jcalvinowens/ircam-viewer/blob/master/sdl.c#L517)),
-but the divisor is the same across the entire frame. So what were then software
-divisions became hardware multiplications at the cost of one extra software
-division (to compute the multiplicative inverse), an obviously economical
-proposition with 49152 pixels in each frame. With that final improvement, the
-formerly overloaded Pi Zero W is now 50% idle.
-
-![](https://static.wbinvd.org/img/ircam/pi-2.jpg)
-
-I additionally implemented a 256KB lookup table of all 65536 necessary 32-bit
-multiplicative inverses, but it showed no measurable advantage on the Pi in
-testing, so I removed it.
+If you prefer to send patches by E-mail, send them to `calvin@wbinvd.org`.
 
 Building
 --------
@@ -58,8 +37,12 @@ Building
 
 `$ make -j -s`
 
-Currently, only two specific camera models are supported: TOPDON TC001 and RX-450, but more will be
-added in the future.
+If you only plan to use the program in headless mode (-n and/or -l), you can use
+the `nosdl` target to build a binary which does not depend on SDL2:
+
+`$ sudo apt install libavcodec-dev libavformat-dev`
+
+`$ make -j -s nosdl`
 
 Viewing
 -------
@@ -135,7 +118,8 @@ use playback mode to adjust the dynamic range, finally enabling RGB recording to
 make a finished product. But you can record RGB directly from a live camera.
 
 The "-n" command line flag will record 16-bit video without rendering output, so
-you can use a headless machine to drive the camera.
+you can use a headless machine to drive the camera. For uses where no GUI is
+required, build the "nosdl" target as described above.
 
 Playback
 --------
@@ -167,7 +151,8 @@ Then, connect to its IP address from the other system:
 ...replacing '1.2.3.4' with the appropriate address on your network.
 
 Any recorded video is stored locally as usual. It is possible to combine both
--l and -n, but the recording will not begin until a remote client connects.
+-l and -n, but the recording will not begin until a remote client connects. For
+uses where no GUI is required, build the "nosdl" target as described above.
 
 Converting Video
 ----------------
@@ -175,3 +160,42 @@ Converting Video
 `$ ffmpeg -i 1-rgb.mkv -f mp4 -c:v h264 -crf 17 highquality.mp4`
 
 `$ ffmpeg -i 1-rgb.mkv -f mp4 -c:v h264 -preset veryfast mobile.mp4`
+
+History
+-------
+
+I hacked this together to make better use of the TOPDON TC001, a (relatively)
+cheap 256x192 25hz USB infrared camera designed to be plugged into a cell phone.
+
+The exact hardware: https://www.amazon.com/dp/B0C23Z42KX
+
+My goal was to write something fast enough to render the video in real time with
+1080p upscaling on a Raspberry Pi Zero W (the older single core ARMv6 without
+hardware division).
+
+It works!
+
+![](https://static.wbinvd.org/img/ircam/pi-1.jpg)
+
+My initial implementation relied on the BCM2835 hardware floating point support,
+and pegged the CPU at 10fps on the Zero. Converting that floating point
+arithmetic to fixed point and/or lookup tables improved it to 20fps.
+
+Using [SDL_FontCache](https://github.com/grimfang4/SDL_FontCache)
+to render the text finally got it to 25fps, but it was so close to the edge that
+simply pinging the Pi from my laptop would make it drop frames!
+
+The final optimization was to refactor the scaling math: each frame requires a
+division for each pixel
+([code](https://github.com/jcalvinowens/ircam-viewer/blob/master/sdl.c#L517)),
+but the divisor is the same across the entire frame. So what were then software
+divisions became hardware multiplications at the cost of one extra software
+division (to compute the multiplicative inverse), an obviously economical
+proposition with 49152 pixels in each frame. With that final improvement, the
+formerly overloaded Pi Zero W is now 50% idle.
+
+![](https://static.wbinvd.org/img/ircam/pi-2.jpg)
+
+I additionally implemented a 256KB lookup table of all 65536 necessary 32-bit
+multiplicative inverses, but it showed no measurable advantage on the Pi in
+testing, so I removed it.

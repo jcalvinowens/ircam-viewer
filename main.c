@@ -235,8 +235,8 @@ out:
 
 __attribute__((noreturn)) static void show_help_and_die(void)
 {
-	puts("usage: ./ircam <-p recfile | -d dev [-n]> [-f fontpath] "
-	     "[-w XXXX] [-q]");
+	puts("usage: ./ircam [ -c remote | -p recfile | -d dev [-n] [-l] ] "
+	     "[-f fontpath] [-w window_pixel_width] [-q]");
 
 	exit(1);
 }
