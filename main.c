@@ -253,7 +253,7 @@ int main(int argc, char **argv)
 		{ "quiet", no_argument, NULL, 'q' },
 		{ NULL, 0, NULL, 0 },
 	};
-	char v4[strlen("::ffff:XXX.XXX.XXX.XXX") + 1];
+	char v4[sizeof("::ffff:XXX.XXX.XXX.XXX")];
 	struct sockaddr_in6 video_srcaddr = {0};
 	struct sigaction ignore_action = {
 		.sa_handler = SIG_IGN,

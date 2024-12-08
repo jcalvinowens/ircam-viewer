@@ -99,7 +99,7 @@ static void tx_main(const char *txdst, const char *txdev)
 	int dev_fd, tx_fd;
 
 	if (inet_pton(AF_INET6, txdst, &dst.sin6_addr) != 1) {
-		char v4[strlen("::ffff:XXX.XXX.XXX.XXX") + 1];
+		char v4[sizeof("::ffff:XXX.XXX.XXX.XXX")];
 
 		snprintf(v4, sizeof(v4), "::ffff:%s", txdst);
 		if (inet_pton(AF_INET6, v4, &dst.sin6_addr) != 1)
