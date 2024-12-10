@@ -49,8 +49,8 @@
  */
 #include "fontcache.h"
 
-extern const uint8_t _binary_fonts_deja_vu_sans_mono_ttf_start;
-extern const uint8_t _binary_fonts_deja_vu_sans_mono_ttf_end;
+extern const uint8_t builtin_ttf_start;
+extern const uint8_t builtin_ttf_end;
 
 /*
  * Lookup table for the Turbo colormap (see README).
@@ -652,8 +652,8 @@ struct sdl_ctx *sdl_open(int upscaled_width, int upscaled_height, bool pb,
 	char tmp[32];
 
 	if (!fontpath) {
-		const uint8_t *src = &_binary_fonts_deja_vu_sans_mono_ttf_start;
-		size_t len = &_binary_fonts_deja_vu_sans_mono_ttf_end - src;
+		const uint8_t *src = &builtin_ttf_start;
+		size_t len = &builtin_ttf_end - src;
 
 		font_tmpfile = tmpfile();
 		if (fwrite(src, 1, len, font_tmpfile) != len)

@@ -3,6 +3,5 @@ ircam-nosdl
 kfwd
 gamma.h
 *.o
-*.s
 *.mkv
 doc/*
