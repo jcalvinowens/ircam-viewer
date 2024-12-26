@@ -269,7 +269,7 @@ static void showtexts(struct sdl_ctx *c, struct temp_fixp max,
 	if (c->vrecord)
 		drawtext(c, 20, 21, "[VREC]");
 
-	if (c->paused && c->pb)
+	if (c->paused)
 		drawtext(c, 46, 21, "[PAUSE]");
 
 	drawtext(c, WIDTH - 40, 1,
@@ -566,6 +566,10 @@ int paint_frame(struct sdl_ctx *c, uint32_t seq, const uint8_t *data)
 
 	if (min >= max) {
 		memset(memptr, 0, WIDTH * HEIGHT * 4);
+		goto skippaint;
+	}
+
+	if (c->paused) {
 		goto skippaint;
 	}
 
