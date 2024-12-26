@@ -169,6 +169,7 @@ struct sdl_ctx {
 	int gammafactor;
 	int contours;
 	bool invert;
+	bool rotate;
 	bool showhelp;
 	bool showlicense;
 	bool showinithelp;
@@ -324,11 +325,12 @@ static void showhelptext(struct sdl_ctx *c)
 	drawtext(c, 40, 100, "Y: TOGGLE CONTOURING");
 	drawtext(c, 40, 107, "F: TOGGLE UNITS F/C");
 	drawtext(c, 40, 114, "I: TOGGLE INVERT");
-	drawtext(c, 40, 121, "C: TOGGLE GRAYSCALE");
-	drawtext(c, 40, 128, "ARROW KEYS MOVE CROSS");
-	drawtext(c, 40, 135, "SPACEBAR PAUSES PLAYBACK");
-	drawtext(c, 40, 142, "L: SHOW LICENSE DETAILS");
-	drawtext(c, 40, 149, "H: SHOW THIS HELP TEXT");
+	drawtext(c, 40, 121, "U: TOGGLE OUTPUT ROTATION");
+	drawtext(c, 40, 128, "C: TOGGLE GRAYSCALE");
+	drawtext(c, 40, 135, "ARROW KEYS MOVE CROSS");
+	drawtext(c, 40, 142, "SPACEBAR PAUSES PLAYBACK");
+	drawtext(c, 40, 149, "L: SHOW LICENSE DETAILS");
+	drawtext(c, 40, 156, "H: SHOW THIS HELP TEXT");
 }
 
 static void sdl_open_fontcache(struct sdl_ctx *c)
@@ -402,6 +404,10 @@ static int sdl_poll_one(struct sdl_ctx *c, SDL_Event *evt, uint16_t min,
 
 		case SDL_SCANCODE_I:
 			c->invert = !c->invert;
+			break;
+
+		case SDL_SCANCODE_U:
+			c->rotate = !c->rotate;
 			break;
 
 		case SDL_SCANCODE_D:
@@ -534,14 +540,21 @@ int paint_frame(struct sdl_ctx *c, uint32_t seq, const uint8_t *data)
 	uint16_t min = UINT16_MAX, max = 0, ptemp;
 	uint16_t orig_min, orig_max;
 	uint32_t multinv;
+	uint32_t output_index;
 	int ret = NOTHING;
-	int pitch, i, o;
+	int pitch, i;
 	uint8_t *memptr;
 	SDL_Event evt;
 	SDL_Rect rect;
 
-	o = c->crosshair_y * WIDTH * 2 + c->crosshair_x * 2;
-	ptemp = data[o] | data[o + 1] << 8;
+	// Get temperature at crosshair
+	i = c->crosshair_y * WIDTH * 2 + c->crosshair_x * 2;
+	if (c->rotate) {
+		// Mirror crosshair if output is rotated
+		i = WIDTH * HEIGHT * 2 - i;
+	}
+	ptemp = data[i] | data[i + 1] << 8;
+
 	for (i = 0; i < WIDTH * HEIGHT * 2; i += 2) {
 		uint16_t v = data[i] | data[i + 1] << 8;
 		max = v > max ? v : max;
@@ -586,7 +599,7 @@ int paint_frame(struct sdl_ctx *c, uint32_t seq, const uint8_t *data)
 	 */
 
 	multinv = (1UL << 24) / ((uint32_t)max - min);
-	for (i = 0, o = 0; i < WIDTH * HEIGHT * 2; i += 2) {
+	for (i = 0; i < WIDTH * HEIGHT * 2; i += 2) {
 		uint32_t raw = (uint32_t)data[i] | data[i + 1] << 8;
 		uint8_t pval;
 
@@ -597,10 +610,18 @@ int paint_frame(struct sdl_ctx *c, uint32_t seq, const uint8_t *data)
 		else
 			pval = (multinv * (raw - min)) >> 16;
 
-		memptr[o++] = getcolor(c, BLUE, pval);
-		memptr[o++] = getcolor(c, GREEN, pval);
-		memptr[o++] = getcolor(c, RED, pval);
-		memptr[o++] = 255;
+		if (c->rotate) {
+			// Rotating the output by 180° is equivalent to iterating through the flattened RGBA array backwards,
+			// but still filling BGRA values in the same order (== subtract a constant of 4).
+			output_index = (WIDTH * HEIGHT - i / 2) * 4 - 4;
+		} else {
+			output_index = i / 2 * 4;
+		}
+
+		memptr[output_index] = getcolor(c, BLUE, pval);
+		memptr[output_index + 1] = getcolor(c, GREEN, pval);
+		memptr[output_index + 2] = getcolor(c, RED, pval);
+		memptr[output_index + 3] = 255;
 	}
 
 skippaint:
