@@ -687,7 +687,7 @@ skippaint:
 
 		paint_colored_marker(c, c->crosshair, 2, (SDL_Color){c->textval, c->textval, c->textval, 0xFF});
 
-		if (c->show_min_max_marker) {
+		if (c->show_min_max_marker && !c->paused) {
 			paint_colored_marker(c, min_point, 1, SDL_COLOR_BLUE);
 			paint_colored_marker(c, max_point, 1, SDL_COLOR_RED);
 		}
