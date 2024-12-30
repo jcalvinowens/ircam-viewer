@@ -1,7 +1,8 @@
 CC ?= gcc
 
-CFLAGS = -O3 -std=c11 -pedantic -D_POSIX_C_SOURCE=200809L -D_REENTRANT \
-	 -I/usr/include/SDL2
+CFLAGS ?= -O3
+BASE_CFLAGS = -std=c11 -pedantic -D_GNU_SOURCE -D_REENTRANT -I/usr/include/SDL2
+CFLAGS += $(BASE_CFLAGS)
 
 WFLAGS = -Wall -Wextra -Wstrict-prototypes -Wmissing-prototypes -Wno-switch \
 	 -Wmissing-declarations -Werror=implicit -Wdeclaration-after-statement \
@@ -13,9 +14,10 @@ WFLAGS = -Wall -Wextra -Wstrict-prototypes -Wmissing-prototypes -Wno-switch \
 all: ircam util/kfwd
 nosdl: ircam-nosdl
 
-debug: CFLAGS += -g -Og -fsanitize=address
+debug: CFLAGS := -g -Og -fsanitize=address $(BASE_CFLAGS)
 debug: all
 
+sdl.s: gamma.h
 sdl.o: gamma.h
 
 ircam: main.o v4l2.o lavc.o inet.o sdl.o fontcache.o builtin.o
@@ -33,6 +35,9 @@ gamma.h:
 
 %.o: %.c
 	$(CC) $< $(CFLAGS) $(WFLAGS) -c -o $@
+
+%.s: %.c
+	$(CC) $< $(CFLAGS) -fverbose-asm $(WFLAGS) -S -c -o $@
 
 %.o: %.s
 	$(CC) $< -c -o $@
