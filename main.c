@@ -92,7 +92,7 @@ static void run_v4l2(struct sdl_ctx *ctx, const char *devpath)
 	dev = v4l2_open(devpath, V4L2_PIX_FMT_YUYV, WIDTH, HEIGHT * 2, FPS);
 
 	while (!stop) {
-		struct v4l2_buffer buf = {0};
+		struct v4l2_buffer buf = { 0 };
 		const uint8_t *data;
 
 		if (v4l2_get_buffer(dev, &buf)) {
@@ -103,10 +103,11 @@ static void run_v4l2(struct sdl_ctx *ctx, const char *devpath)
 		}
 
 		if (buf.bytesused != ISKIP + ISIZE)
-			errx(1, "bad image size (%d != %d), is '%s' the "
-			      "correct device? Pass '-d' to specify a "
-			      "different one", buf.bytesused, ISIZE * 2,
-			      devpath);
+			errx(1,
+			     "bad image size (%d != %d), is '%s' the "
+			     "correct device? Pass '-d' to specify a "
+			     "different one",
+			     buf.bytesused, ISIZE * 2, devpath);
 
 		data = v4l2_buf_mmap(dev, &buf) + ISKIP;
 
@@ -254,7 +255,7 @@ int main(int argc, char **argv)
 		{ NULL, 0, NULL, 0 },
 	};
 	char v4[sizeof("::ffff:XXX.XXX.XXX.XXX")];
-	struct sockaddr_in6 video_srcaddr = {0};
+	struct sockaddr_in6 video_srcaddr = { 0 };
 	struct sigaction ignore_action = {
 		.sa_handler = SIG_IGN,
 	};
@@ -303,8 +304,8 @@ int main(int argc, char **argv)
 				break;
 
 			snprintf(v4, sizeof(v4), "::ffff:%s", optarg);
-			if (inet_pton(AF_INET6, v4,
-				      &video_srcaddr.sin6_addr) == 1)
+			if (inet_pton(AF_INET6, v4, &video_srcaddr.sin6_addr) ==
+			    1)
 				break;
 
 			errx(1, "Can't parse address '%s'", optarg);
@@ -342,8 +343,8 @@ done:
 		}
 
 		if (listen_only) {
-			remote_socket = fdopen(get_stream_listen_one(8888),
-					       "w");
+			remote_socket =
+				fdopen(get_stream_listen_one(8888), "w");
 			if (!remote_socket)
 				err(1, "Error on remote socket");
 		}

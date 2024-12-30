@@ -28,7 +28,7 @@
 #include <sys/mman.h>
 #include <sys/types.h>
 
-#define MAXBUFS	64
+#define MAXBUFS 64
 
 struct v4l2_dev {
 	struct v4l2_capability cap;
@@ -101,9 +101,8 @@ static void v4l2_init_stream(struct v4l2_dev *dev)
 
 		dev->buffer_lens[i] = bufs[i].length;
 		dev->mmaps[i] = mmap(NULL, bufs[i].length,
-				     PROT_READ | PROT_WRITE,
-				     MAP_SHARED, dev->v4l2_fd,
-				     bufs[i].m.offset);
+				     PROT_READ | PROT_WRITE, MAP_SHARED,
+				     dev->v4l2_fd, bufs[i].m.offset);
 
 		if (dev->mmaps[i] == MAP_FAILED)
 			err(1, "can't mmap buffer %d", i);
@@ -176,7 +175,7 @@ struct v4l2_dev *v4l2_open(const char *path, uint32_t fmt, int width,
  */
 int v4l2_get_buffer(struct v4l2_dev *dev, struct v4l2_buffer *buf)
 {
-	struct pollfd pfd = {0};
+	struct pollfd pfd = { 0 };
 
 	do {
 		*buf = (struct v4l2_buffer){

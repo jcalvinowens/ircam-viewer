@@ -70,25 +70,25 @@ extern const uint8_t builtin_ttf_end;
  */
 
 static const uint8_t b10lookup[64] = {
-	0, 2, 3, 5, 6, 8, 9, 11, 12, 14, 16, 17, 19, 20, 22, 23, 25, 27, 28, 30,
-	31, 33, 34, 36, 38, 39, 41, 42, 44, 45, 47, 48, 50, 52, 53, 55, 56, 58,
-	59, 61, 62, 64, 66, 67, 69, 70, 72, 73, 75, 77, 78, 80, 81, 83, 84, 86,
-	88, 89, 91, 92, 94, 95, 97, 98,
+	0,  2,	3,  5,	6,  8,	9,  11, 12, 14, 16, 17, 19, 20, 22, 23,
+	25, 27, 28, 30, 31, 33, 34, 36, 38, 39, 41, 42, 44, 45, 47, 48,
+	50, 52, 53, 55, 56, 58, 59, 61, 62, 64, 66, 67, 69, 70, 72, 73,
+	75, 77, 78, 80, 81, 83, 84, 86, 88, 89, 91, 92, 94, 95, 97, 98,
 };
 
 static const uint8_t b10rev[100] = {
-	0, 1, 1, 2, 3, 3, 4, 4, 5, 6, 6, 7, 8, 8, 9, 10, 10, 11, 12, 12, 13,
-	13, 14, 15, 15, 16, 17, 17, 18, 19, 19, 20, 20, 21, 22, 22, 23, 24, 24,
-	25, 26, 26, 27, 28, 28, 29, 29, 30, 31, 31, 32, 33, 33, 34, 35, 35, 36,
-	36, 37, 38, 38, 39, 40, 40, 41, 42, 42, 43, 44, 44, 45, 45, 46, 47, 47,
-	48, 49, 49, 50, 51, 51, 52, 52, 53, 54, 54, 55, 56, 56, 57, 58, 58, 59,
-	60, 60, 61, 61, 62, 63, 63,
+	0,  1,	1,  2,	3,  3,	4,  4,	5,  6,	6,  7,	8,  8,	9,  10, 10,
+	11, 12, 12, 13, 13, 14, 15, 15, 16, 17, 17, 18, 19, 19, 20, 20, 21,
+	22, 22, 23, 24, 24, 25, 26, 26, 27, 28, 28, 29, 29, 30, 31, 31, 32,
+	33, 33, 34, 35, 35, 36, 36, 37, 38, 38, 39, 40, 40, 41, 42, 42, 43,
+	44, 44, 45, 45, 46, 47, 47, 48, 49, 49, 50, 51, 51, 52, 52, 53, 54,
+	54, 55, 56, 56, 57, 58, 58, 59, 60, 60, 61, 61, 62, 63, 63,
 };
 
 struct temp_fixp {
 	unsigned major : 12;
-	unsigned minor :  6;
-	unsigned sign  :  1;
+	unsigned minor : 6;
+	unsigned sign : 1;
 };
 
 static const struct temp_fixp abszero = {
@@ -228,7 +228,8 @@ static time_t now_mono(void)
 }
 
 static void showtexts(struct sdl_ctx *c, struct temp_fixp max,
-		      struct temp_fixp ptemp, struct temp_fixp min, uint32_t seq)
+		      struct temp_fixp ptemp, struct temp_fixp min,
+		      uint32_t seq)
 {
 	char s = 'C';
 
@@ -254,14 +255,15 @@ static void showtexts(struct sdl_ctx *c, struct temp_fixp max,
 		}
 
 		drawtext(c, 0, 7, "[%c%u.%02u%c   %c%u.%02u%c]",
-			 fmin.sign ? '-' : ' ', fmin.major, b10lookup[fmin.minor], s,
-			 fmax.sign ? '-' : ' ', fmax.major, b10lookup[fmax.minor], s);
+			 fmin.sign ? '-' : ' ', fmin.major,
+			 b10lookup[fmin.minor], s, fmax.sign ? '-' : ' ',
+			 fmax.major, b10lookup[fmax.minor], s);
 	} else {
 		drawtext(c, 0, 7, "[   AUTO   AUTO   ]");
 	}
 
-	drawtext(c, 0, 14, "[ GAM %s  CON %d ]",
-		 gammavals[c->gammafactor], c->contours);
+	drawtext(c, 0, 14, "[ GAM %s  CON %d ]", gammavals[c->gammafactor],
+		 c->contours);
 
 	if (c->recording && !c->pb)
 		drawtext(c, 0, 21, "[REC]");
@@ -272,11 +274,11 @@ static void showtexts(struct sdl_ctx *c, struct temp_fixp max,
 	if (c->paused && c->pb)
 		drawtext(c, 46, 21, "[PAUSE]");
 
-	drawtext(c, WIDTH - 40, 1,
-		 "[%05" PRIu32 ".%02" PRIu32 "]", seq / 25, (seq % 25) * 4);
+	drawtext(c, WIDTH - 40, 1, "[%05" PRIu32 ".%02" PRIu32 "]", seq / 25,
+		 (seq % 25) * 4);
 
-	drawtext(c, WIDTH - 45, 8,
-		 "% 5" PRId64 " DROPS", (int64_t)seq - c->frame_paint_seq);
+	drawtext(c, WIDTH - 45, 8, "% 5" PRId64 " DROPS",
+		 (int64_t)seq - c->frame_paint_seq);
 
 	if (c->showinithelp) {
 		drawtext(c, 90, 70, "HOLD [H] FOR HELP");
@@ -288,14 +290,14 @@ static void showtexts(struct sdl_ctx *c, struct temp_fixp max,
 
 static void showlicensetext(struct sdl_ctx *c)
 {
-	drawtext(c, 40,  33, "Linux Infrared Camera Viewer");
-	drawtext(c, 40,  40, "Copyright (C) 2024 Calvin Owens");
-	drawtext(c, 40,  54, "This program is free software: you can");
-	drawtext(c, 40,  61, "redistribute it and/or modify it under the");
-	drawtext(c, 40,  68, "terms of the GNU General Public License as");
-	drawtext(c, 40,  75, "published by the Free Software Foundation,");
-	drawtext(c, 40,  82, "either version 3 of the License, or (at");
-	drawtext(c, 40,  89, "your option) any later version.");
+	drawtext(c, 40, 33, "Linux Infrared Camera Viewer");
+	drawtext(c, 40, 40, "Copyright (C) 2024 Calvin Owens");
+	drawtext(c, 40, 54, "This program is free software: you can");
+	drawtext(c, 40, 61, "redistribute it and/or modify it under the");
+	drawtext(c, 40, 68, "terms of the GNU General Public License as");
+	drawtext(c, 40, 75, "published by the Free Software Foundation,");
+	drawtext(c, 40, 82, "either version 3 of the License, or (at");
+	drawtext(c, 40, 89, "your option) any later version.");
 	drawtext(c, 40, 103, "This program is distributed in the hope that");
 	drawtext(c, 40, 110, "it will be useful, but WITHOUT ANY WARRANTY;");
 	drawtext(c, 40, 117, "without even the implied warranty of");
@@ -335,8 +337,9 @@ static void sdl_open_fontcache(struct sdl_ctx *c)
 		FC_FreeFont(c->f);
 
 	c->f = FC_CreateFont();
-	FC_LoadFont(c->f, c->r, c->fontpath, 32, FC_MakeColor(c->textval,
-		    c->textval, c->textval, 255), TTF_STYLE_NORMAL);
+	FC_LoadFont(c->f, c->r, c->fontpath, 32,
+		    FC_MakeColor(c->textval, c->textval, c->textval, 255),
+		    TTF_STYLE_NORMAL);
 }
 
 static int sdl_poll_one(struct sdl_ctx *c, SDL_Event *evt, uint16_t min,
@@ -665,7 +668,8 @@ struct sdl_ctx *sdl_open(int upscaled_width, int upscaled_height, bool pb,
 	}
 
 	if (access(fontpath, R_OK))
-		err(1, "can't read '%s': pass a path to a valid font with '-f'", fontpath);
+		err(1, "can't read '%s': pass a path to a valid font with '-f'",
+		    fontpath);
 
 	c = calloc(1, sizeof(*c));
 	if (!c)

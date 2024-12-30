@@ -93,8 +93,8 @@ struct lavc_ctx *lavc_start_encode(const char *path, int width, int height,
 	c->ctx->codec_id = AV_CODEC_ID_FFV1;
 	c->ctx->width = width;
 	c->ctx->height = height;
-	c->ctx->time_base = (AVRational){1, 1000};
-	c->ctx->framerate = (AVRational){fps, 1};
+	c->ctx->time_base = (AVRational){ 1, 1000 };
+	c->ctx->framerate = (AVRational){ fps, 1 };
 	c->ctx->pix_fmt = pix_fmt;
 	c->pts_mult = 1000 / fps;
 
@@ -217,7 +217,8 @@ struct lavc_ctx *lavc_start_decode(const char *path)
 	if (avformat_find_stream_info(c->fctx, NULL) < 0)
 		errx(1, "no stream information in '%s'", path);
 
-	sidx = av_find_best_stream(c->fctx, AVMEDIA_TYPE_VIDEO, -1, -1, NULL, 0);
+	sidx = av_find_best_stream(c->fctx, AVMEDIA_TYPE_VIDEO, -1, -1, NULL,
+				   0);
 	if (sidx < 0)
 		errx(1, "no video stream in '%s'", path);
 

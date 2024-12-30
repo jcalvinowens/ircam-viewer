@@ -22,8 +22,8 @@
 
 struct lavc_ctx;
 
-struct lavc_ctx *lavc_start_encode(const char *path, int width,
-				   int height, int fps, int pix_fmt);
+struct lavc_ctx *lavc_start_encode(const char *path, int width, int height,
+				   int fps, int pix_fmt);
 
 int lavc_encode(struct lavc_ctx *c, uint32_t pts, const uint8_t *data, int len);
 

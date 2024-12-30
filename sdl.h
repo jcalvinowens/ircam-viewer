@@ -57,7 +57,11 @@ static int paint_frame(struct sdl_ctx *c, uint32_t seq, const uint8_t *data)
 	return NOTHING;
 }
 
-static void sdl_loop(struct sdl_ctx *c) {}
-static void sdl_close(struct sdl_ctx *c) {}
+static void sdl_loop(struct sdl_ctx *c)
+{
+}
+static void sdl_close(struct sdl_ctx *c)
+{
+}
 
 #endif /* IRCAM_NOSDL */
