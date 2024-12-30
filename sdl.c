@@ -25,14 +25,7 @@
 #include <string.h>
 #include <signal.h>
 #include <unistd.h>
-#include <fcntl.h>
-#include <errno.h>
 #include <err.h>
-#include <getopt.h>
-#include <poll.h>
-#include <fcntl.h>
-#include <sys/ioctl.h>
-#include <sys/mman.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/timerfd.h>
@@ -52,8 +45,8 @@
 extern const uint8_t builtin_ttf_start;
 extern const uint8_t builtin_ttf_end;
 
-static const SDL_Color SDL_COLOR_RED = {0xFF, 0, 0, 0xFF};
-static const SDL_Color SDL_COLOR_BLUE = {0, 0, 0xFF, 0xFF};
+static const SDL_Color SDL_COLOR_RED = { 0xFF, 0, 0, 0xFF };
+static const SDL_Color SDL_COLOR_BLUE = { 0, 0, 0xFF, 0xFF };
 
 /*
  * Lookup table for the Turbo colormap (see README).
@@ -181,6 +174,7 @@ struct sdl_ctx {
 	uint16_t scale_max;
 	uint16_t scale_min;
 	SDL_Point crosshair;
+	SDL_Color crosshair_color;
 	struct lavc_ctx *vrecord;
 	uint32_t frame_paint_seq;
 	uint8_t textval;
@@ -207,6 +201,25 @@ static uint8_t getcolor(struct sdl_ctx *c, int color, uint8_t r)
 		return turbo_srgb_bytes[r][color];
 
 	return r;
+}
+
+static SDL_Point calc_point_from_buf_offset(const struct sdl_ctx *c,
+					    const int offset)
+{
+	if (c->rotate) {
+		return (SDL_Point){ WIDTH - (offset / 2 % WIDTH),
+				    HEIGHT - (offset / 2 / WIDTH) };
+	}
+
+	return (SDL_Point){ offset / 2 % WIDTH, offset / 2 / WIDTH };
+}
+
+static void update_crosshair_color(struct sdl_ctx *c)
+{
+	c->crosshair_color.r = c->textval;
+	c->crosshair_color.g = c->textval;
+	c->crosshair_color.b = c->textval;
+	c->crosshair_color.a = 255;
 }
 
 static void drawtext(struct sdl_ctx *c, int x, int y, const char *fmt, ...)
@@ -400,6 +413,7 @@ static int sdl_poll_one(struct sdl_ctx *c, SDL_Event *evt, uint16_t min,
 				c->showtext = 0;
 			}
 
+			update_crosshair_color(c);
 			break;
 
 		case SDL_SCANCODE_M:
@@ -533,15 +547,6 @@ static int sdl_poll_one(struct sdl_ctx *c, SDL_Event *evt, uint16_t min,
 	return NOTHING;
 }
 
-static SDL_Point calc_point_from_buf_offset(const struct sdl_ctx *c, const int offset)
-{
-	if (c->rotate) {
-		return (SDL_Point){ WIDTH - (offset / 2 % WIDTH), HEIGHT - (offset / 2 / WIDTH) };
-	}
-
-	return (SDL_Point){ offset / 2 % WIDTH, offset / 2 / WIDTH };
-}
-
 /**
  * paint_colored_marker() - Paint a marker (cross) given a center point, a size and a color.
  *
@@ -550,17 +555,23 @@ static SDL_Point calc_point_from_buf_offset(const struct sdl_ctx *c, const int o
  * @param size The size (radius) of the marker.
  * @param color The color to use for the marker.
  */
-static void paint_colored_marker(const struct sdl_ctx *c, const SDL_Point center_point, const int size, const SDL_Color color)
+static void paint_colored_marker(const struct sdl_ctx *c,
+				 const SDL_Point *center_point, const int size,
+				 const SDL_Color *color)
 {
 	Uint8 original_red_color;
 	Uint8 original_green_color;
 	Uint8 original_blue_color;
 	Uint8 original_alpha;
-	SDL_GetRenderDrawColor(c->r, &original_red_color, &original_green_color, &original_blue_color, &original_alpha);
-	SDL_SetRenderDrawColor(c->r, color.r, color.g, color.b, color.a);
-	SDL_RenderDrawLine(c->r, center_point.x, center_point.y - size, center_point.x, center_point.y + size);
-	SDL_RenderDrawLine(c->r, center_point.x - size, center_point.y, center_point.x + size, center_point.y);
-	SDL_SetRenderDrawColor(c->r, original_red_color, original_green_color, original_blue_color, original_alpha);
+	SDL_GetRenderDrawColor(c->r, &original_red_color, &original_green_color,
+			       &original_blue_color, &original_alpha);
+	SDL_SetRenderDrawColor(c->r, color->r, color->g, color->b, color->a);
+	SDL_RenderDrawLine(c->r, center_point->x, center_point->y - size,
+			   center_point->x, center_point->y + size);
+	SDL_RenderDrawLine(c->r, center_point->x - size, center_point->y,
+			   center_point->x + size, center_point->y);
+	SDL_SetRenderDrawColor(c->r, original_red_color, original_green_color,
+			       original_blue_color, original_alpha);
 }
 
 /**
@@ -576,8 +587,8 @@ static void paint_colored_marker(const struct sdl_ctx *c, const SDL_Point center
 int paint_frame(struct sdl_ctx *c, uint32_t seq, const uint8_t *data)
 {
 	uint16_t min = UINT16_MAX, max = 0, ptemp;
-	SDL_Point min_point = {0, 0};
-	SDL_Point max_point = {0, 0};
+	SDL_Point min_point = { 0, 0 };
+	SDL_Point max_point = { 0, 0 };
 	uint16_t orig_min, orig_max;
 	uint32_t multinv;
 	uint32_t output_index;
@@ -685,11 +696,11 @@ skippaint:
 		showtexts(c, raw_to_celsius(orig_max), raw_to_celsius(ptemp),
 			  raw_to_celsius(orig_min), seq);
 
-		paint_colored_marker(c, c->crosshair, 2, (SDL_Color){c->textval, c->textval, c->textval, 0xFF});
+		paint_colored_marker(c, &c->crosshair, 2, &c->crosshair_color);
 
 		if (c->show_min_max_marker && !c->paused) {
-			paint_colored_marker(c, min_point, 1, SDL_COLOR_BLUE);
-			paint_colored_marker(c, max_point, 1, SDL_COLOR_RED);
+			paint_colored_marker(c, &min_point, 1, &SDL_COLOR_BLUE);
+			paint_colored_marker(c, &max_point, 1, &SDL_COLOR_RED);
 		}
 	}
 
@@ -750,9 +761,10 @@ struct sdl_ctx *sdl_open(int upscaled_width, int upscaled_height, bool pb,
 	c->showtext = 1;
 	c->fahren = 1;
 	c->contours = 1;
+	c->textval = 255;
 	c->crosshair.x = WIDTH / 2;
 	c->crosshair.y = HEIGHT / 2;
-	c->textval = 255;
+	update_crosshair_color(c);
 	c->fontpath = strdup(fontpath);
 	c->fonttmp = font_tmpfile;
 
