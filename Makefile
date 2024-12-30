@@ -17,6 +17,12 @@ nosdl: ircam-nosdl
 debug: CFLAGS := -g -Og -fsanitize=address $(BASE_CFLAGS)
 debug: all
 
+FMTSRCS = inet.c inet.h lavc.c lavc.h main.c sdl.c sdl.h v4l2.c v4l2.h \
+	  util/kfwd.c
+
+format:
+	clang-format -i $(FMTSRCS)
+
 sdl.s: gamma.h
 sdl.o: gamma.h
 

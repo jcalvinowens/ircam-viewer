@@ -30,6 +30,7 @@ output from `strace -vvv -e ioctl ./ircam 2>&1 | grep -v DRM | head -n20`, and
 from `ffmpeg -f v4l2 -list_formats all -i /dev/videoX`.
 
 If you prefer to send patches by E-mail, send them to `calvin@wbinvd.org`.
+Please run `make format` before submitting.
 
 Building
 --------
