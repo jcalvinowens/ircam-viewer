@@ -490,14 +490,14 @@ static int sdl_poll_one(struct sdl_ctx *c, SDL_Event *evt, uint16_t min,
 		case SDL_SCANCODE_UP:
 			c->crosshair_y--;
 			if (c->crosshair_y < 0)
-				c->crosshair_x = HEIGHT - 1;
+				c->crosshair_y = HEIGHT - 1;
 
 			break;
 
 		case SDL_SCANCODE_DOWN:
 			c->crosshair_y++;
 			if (c->crosshair_y >= HEIGHT)
-				c->crosshair_x = 0;
+				c->crosshair_y = 0;
 
 			break;
 
