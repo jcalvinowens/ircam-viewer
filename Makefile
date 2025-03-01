@@ -27,14 +27,14 @@ sdl.s: gamma.h
 sdl.o: gamma.h
 
 ircam: main.o v4l2.o lavc.o inet.o sdl.o fontcache.o builtin.o
-	$(CC) -o $@ $^ $(CFLAGS) -lSDL2 -lSDL2_ttf -lavcodec -lavutil -lavformat
+	$(CC) -o $@ $^ $(CFLAGS) $(LDFLAGS) -lSDL2 -lSDL2_ttf -lavcodec -lavutil -lavformat
 
 ircam-nosdl: CFLAGS += -DIRCAM_NOSDL -Wno-unused-parameter
 ircam-nosdl: main.o v4l2.o lavc.o inet.o
-	$(CC) -o $@ $^ $(CFLAGS) -lavcodec -lavutil -lavformat
+	$(CC) -o $@ $^ $(CFLAGS) $(LDFLAGS) -lavcodec -lavutil -lavformat
 
 util/kfwd: util/kfwd.o
-	$(CC) -o $@ $^ $(CFLAGS)
+	$(CC) -o $@ $^ $(CFLAGS) $(LDFLAGS)
 
 gamma.h:
 	./util/gamma.py > gamma.h
