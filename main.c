@@ -131,8 +131,8 @@ static void run_v4l2(struct sdl_ctx *ctx, const char *devpath)
 					break;
 				}
 
-				snprintf(path, sizeof(path), "%ld-raw.mkv",
-					 time(NULL));
+				snprintf(path, sizeof(path), "%lld-raw.mkv",
+					 (long long)time(NULL));
 
 				record = lavc_start_encode(path, WIDTH, HEIGHT,
 							   FPS,
@@ -337,7 +337,9 @@ done:
 		if (record_only) {
 			char path[PATH_MAX];
 
-			snprintf(path, sizeof(path), "%ld-raw.mkv", time(NULL));
+			snprintf(path, sizeof(path), "%lld-raw.mkv",
+				 (long long)time(NULL));
+
 			record = lavc_start_encode(path, WIDTH, HEIGHT, FPS,
 						   AV_PIX_FMT_GRAY16LE);
 		}

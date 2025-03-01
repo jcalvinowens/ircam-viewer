@@ -488,7 +488,9 @@ static int sdl_poll_one(struct sdl_ctx *c, SDL_Event *evt, uint16_t min,
 				break;
 			}
 
-			snprintf(path, sizeof(path), "%ld-rgb.mkv", time(NULL));
+			snprintf(path, sizeof(path), "%lld-rgb.mkv",
+				 (long long)time(NULL));
+
 			c->vrecord = lavc_start_encode(path, WIDTH, HEIGHT, FPS,
 						       AV_PIX_FMT_BGRA);
 			break;
