@@ -30,9 +30,9 @@
 #include <sys/stat.h>
 #include <sys/timerfd.h>
 
-#include <SDL.h>
-#include <SDL_video.h>
-#include <SDL_ttf.h>
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_video.h>
+#include <SDL2/SDL_ttf.h>
 
 #include "dev.h"
 #include "lavc.h"

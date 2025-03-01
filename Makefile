@@ -1,7 +1,7 @@
 CC ?= gcc
 
 CFLAGS ?= -O3
-BASE_CFLAGS = -std=c11 -pedantic -D_GNU_SOURCE -D_REENTRANT -I/usr/include/SDL2
+BASE_CFLAGS = -std=c11 -pedantic -D_GNU_SOURCE -D_REENTRANT
 CFLAGS += $(BASE_CFLAGS)
 
 WFLAGS = -Wall -Wextra -Wstrict-prototypes -Wmissing-prototypes -Wno-switch \
