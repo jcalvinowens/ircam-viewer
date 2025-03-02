@@ -356,6 +356,9 @@ static void sdl_open_fontcache(struct sdl_ctx *c)
 		FC_FreeFont(c->f);
 
 	c->f = FC_CreateFont();
+	if (!c->f)
+		errx(1, "Can't instantiate new font");
+
 	FC_LoadFont(c->f, c->r, c->fontpath, 32,
 		    FC_MakeColor(c->textval, c->textval, c->textval, 255),
 		    TTF_STYLE_NORMAL);
@@ -773,10 +776,19 @@ struct sdl_ctx *sdl_open(int upscaled_width, int upscaled_height, bool pb,
 	if (!hidehelp)
 		c->showinithelp = true;
 
-	c->w = SDL_CreateWindow(window_name, 0, 0, upscaled_width,
+	if (SDL_Init(SDL_INIT_EVERYTHING))
+		errx(1, "Can't initialize libsdl");
+
+	c->w = SDL_CreateWindow(window_name, SDL_WINDOWPOS_UNDEFINED,
+				SDL_WINDOWPOS_UNDEFINED, upscaled_width,
 				upscaled_height, SDL_WINDOW_SHOWN);
+	if (!c->w)
+		errx(1, "Can't create SDL window");
 
 	c->r = SDL_CreateRenderer(c->w, -1, 0);
+	if (!c->r)
+		errx(1, "Can't create SDL renderer");
+
 	SDL_RenderSetLogicalSize(c->r, WIDTH, HEIGHT);
 	SDL_ShowCursor(SDL_DISABLE);
 
@@ -786,8 +798,12 @@ struct sdl_ctx *sdl_open(int upscaled_width, int upscaled_height, bool pb,
 	 */
 	c->t = SDL_CreateTexture(c->r, SDL_PIXELFORMAT_BGRA32,
 				 SDL_TEXTUREACCESS_STREAMING, WIDTH, HEIGHT);
+	if (!c->t)
+		errx(1, "Can't create SDL texture");
 
-	TTF_Init();
+	if (TTF_Init())
+		errx(1, "Can't initialize SDL-TTF");
+
 	sdl_open_fontcache(c);
 	return c;
 }
@@ -800,13 +816,13 @@ struct sdl_ctx *sdl_open(int upscaled_width, int upscaled_height, bool pb,
  */
 void sdl_close(struct sdl_ctx *c)
 {
+	FC_FreeFont(c->f);
+	free((void *)c->fontpath);
+	TTF_Quit();
 	SDL_DestroyTexture(c->t);
 	SDL_DestroyRenderer(c->r);
 	SDL_DestroyWindow(c->w);
 	SDL_Quit();
-	FC_FreeFont(c->f);
-	free((void *)c->fontpath);
-	TTF_Quit();
 
 	if (c->fonttmp)
 		fclose(c->fonttmp);
