@@ -53,4 +53,4 @@ fontcache.o: fontcache.c
 	$(CC) $< $(CFLAGS) -c -o $@
 
 clean:
-	rm -f ircam ircam-nosdl util/kfwd *.o fonts/*.o util/*.o gamma.h
+	rm -f ircam ircam-nosdl util/kfwd *.o fonts/*.o util/*.o
