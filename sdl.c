@@ -776,7 +776,7 @@ struct sdl_ctx *sdl_open(int upscaled_width, int upscaled_height, bool pb,
 	if (!hidehelp)
 		c->showinithelp = true;
 
-	if (SDL_Init(SDL_INIT_EVERYTHING))
+	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS))
 		errx(1, "Can't initialize libsdl: %s", SDL_GetError());
 
 	c->w = SDL_CreateWindow(window_name, SDL_WINDOWPOS_UNDEFINED,
