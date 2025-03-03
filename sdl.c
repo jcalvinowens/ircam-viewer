@@ -777,17 +777,17 @@ struct sdl_ctx *sdl_open(int upscaled_width, int upscaled_height, bool pb,
 		c->showinithelp = true;
 
 	if (SDL_Init(SDL_INIT_EVERYTHING))
-		errx(1, "Can't initialize libsdl");
+		errx(1, "Can't initialize libsdl: %s", SDL_GetError());
 
 	c->w = SDL_CreateWindow(window_name, SDL_WINDOWPOS_UNDEFINED,
 				SDL_WINDOWPOS_UNDEFINED, upscaled_width,
 				upscaled_height, SDL_WINDOW_SHOWN);
 	if (!c->w)
-		errx(1, "Can't create SDL window");
+		errx(1, "Can't create SDL window: %s", SDL_GetError());
 
 	c->r = SDL_CreateRenderer(c->w, -1, 0);
 	if (!c->r)
-		errx(1, "Can't create SDL renderer");
+		errx(1, "Can't create SDL renderer: %s", SDL_GetError());
 
 	SDL_RenderSetLogicalSize(c->r, WIDTH, HEIGHT);
 	SDL_ShowCursor(SDL_DISABLE);
@@ -799,10 +799,10 @@ struct sdl_ctx *sdl_open(int upscaled_width, int upscaled_height, bool pb,
 	c->t = SDL_CreateTexture(c->r, SDL_PIXELFORMAT_BGRA32,
 				 SDL_TEXTUREACCESS_STREAMING, WIDTH, HEIGHT);
 	if (!c->t)
-		errx(1, "Can't create SDL texture");
+		errx(1, "Can't create SDL texture: %s", SDL_GetError());
 
 	if (TTF_Init())
-		errx(1, "Can't initialize SDL-TTF");
+		errx(1, "Can't initialize SDL-TTF: %s", TTF_GetError());
 
 	sdl_open_fontcache(c);
 	return c;
