@@ -732,10 +732,11 @@ skippaint:
  * Return: SDL context handle on success, NULL on error.
  */
 struct sdl_ctx *sdl_open(int upscaled_width, int upscaled_height, bool pb,
-			 const char *fontpath, bool hidehelp)
+			 const char *fontpath, bool hidehelp, bool fullscreen)
 {
 	const char *window_name = "Linux V4L2/SDL2 IR Camera Viewer";
 	FILE *font_tmpfile = NULL;
+	uint32_t sdl_flags;
 	struct sdl_ctx *c;
 	char tmp[32];
 
@@ -779,9 +780,14 @@ struct sdl_ctx *sdl_open(int upscaled_width, int upscaled_height, bool pb,
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS))
 		errx(1, "Can't initialize libsdl: %s", SDL_GetError());
 
+	sdl_flags = SDL_WINDOW_OPENGL;
+
+	if (fullscreen)
+		sdl_flags |= SDL_WINDOW_FULLSCREEN;
+
 	c->w = SDL_CreateWindow(window_name, SDL_WINDOWPOS_UNDEFINED,
 				SDL_WINDOWPOS_UNDEFINED, upscaled_width,
-				upscaled_height, SDL_WINDOW_SHOWN);
+				upscaled_height, sdl_flags);
 	if (!c->w)
 		errx(1, "Can't create SDL window: %s", SDL_GetError());
 

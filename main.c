@@ -51,6 +51,7 @@ static const char *fontpath;
 static int listen_only;
 static FILE *remote_socket;
 static int hide_init_help;
+static int fullscreen;
 
 static sig_atomic_t stop;
 
@@ -252,6 +253,7 @@ int main(int argc, char **argv)
 		{ "record-only", no_argument, NULL, 'n' },
 		{ "font", required_argument, NULL, 'f' },
 		{ "quiet", no_argument, NULL, 'q' },
+		{ "fullscreen", no_argument, NULL, 'F' },
 		{ NULL, 0, NULL, 0 },
 	};
 	char v4[sizeof("::ffff:XXX.XXX.XXX.XXX")];
@@ -272,7 +274,7 @@ int main(int argc, char **argv)
 	sigaction(SIGHUP, &ignore_action, NULL);
 
 	while (1) {
-		int i = getopt_long(argc, argv, "hd:p:nw:f:lc:q", opts, NULL);
+		int i = getopt_long(argc, argv, "hd:p:nw:f:lc:qF", opts, NULL);
 
 		switch (i) {
 		case 'd':
@@ -311,6 +313,9 @@ int main(int argc, char **argv)
 			errx(1, "Can't parse address '%s'", optarg);
 		case 'q':
 			hide_init_help = 1;
+			break;
+		case 'F':
+			fullscreen = 1;
 			break;
 		case 'h':
 		default:
@@ -356,7 +361,7 @@ done:
 	}
 
 	ctx = sdl_open(window_width, window_height, !!filepath, fontpath,
-		       hide_init_help);
+		       hide_init_help, fullscreen);
 	if (!ctx)
 		errx(1, "can't initialize libsdl");
 
