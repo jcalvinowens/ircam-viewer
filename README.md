@@ -10,7 +10,7 @@ Features include:
 * FFV1 lossless 16-bit video recording
 * Native support for remote viewing over the network
 * Full manual control of view dynamic range in software
-* Runs both under X and as a standalone program
+* Runs both under X and as a standalone program (see [meta-ircam-viewer](https://github.com/jcalvinowens/meta-ircam-viewer))
 * Font caching using [SDL_FontCache](https://github.com/grimfang4/SDL_FontCache)
 * Precomputed gamma correction lookup tables
 * Fixed point arithmetic
@@ -45,6 +45,17 @@ the `nosdl` target to build a binary which does not depend on SDL2:
 `$ sudo apt install libavcodec-dev libavformat-dev`
 
 `$ make -j -s nosdl`
+
+Yocto
+-----
+
+The [meta-ircam-viewer](https://github.com/jcalvinowens/meta-ircam-viewer) Yocto
+layer builds firmware for an "appliance" which does nothing but run this
+program when a USB IR camera is connected.
+
+It supports generic UEFI x86 PCs and all Raspberry Pi models. You can download
+pre-built disk images on the
+[github releases page](https://github.com/jcalvinowens/meta-ircam-viewer/releases)
 
 Viewing
 -------
