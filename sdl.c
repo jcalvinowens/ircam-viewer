@@ -791,7 +791,7 @@ struct sdl_ctx *sdl_open(int upscaled_width, int upscaled_height, bool pb,
 	if (!c->w)
 		errx(1, "Can't create SDL window: %s", SDL_GetError());
 
-	c->r = SDL_CreateRenderer(c->w, -1, 0);
+	c->r = SDL_CreateRenderer(c->w, -1, SDL_RENDERER_PRESENTVSYNC);
 	if (!c->r)
 		errx(1, "Can't create SDL renderer: %s", SDL_GetError());
 
