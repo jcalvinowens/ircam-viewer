@@ -736,7 +736,7 @@ struct sdl_ctx *sdl_open(int upscaled_width, int upscaled_height, bool pb,
 {
 	const char *window_name = "Linux V4L2/SDL2 IR Camera Viewer";
 	FILE *font_tmpfile = NULL;
-	uint32_t sdl_flags;
+	uint32_t window_flags, renderer_flags;
 	struct sdl_ctx *c;
 	char tmp[32];
 
@@ -780,20 +780,28 @@ struct sdl_ctx *sdl_open(int upscaled_width, int upscaled_height, bool pb,
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS))
 		errx(1, "Can't initialize libsdl: %s", SDL_GetError());
 
-	sdl_flags = SDL_WINDOW_OPENGL;
+	window_flags = SDL_WINDOW_OPENGL;
 
 	if (fullscreen)
-		sdl_flags |= SDL_WINDOW_FULLSCREEN;
+		window_flags |= SDL_WINDOW_FULLSCREEN;
 
 	c->w = SDL_CreateWindow(window_name, SDL_WINDOWPOS_UNDEFINED,
 				SDL_WINDOWPOS_UNDEFINED, upscaled_width,
-				upscaled_height, sdl_flags);
+				upscaled_height, window_flags);
 	if (!c->w)
 		errx(1, "Can't create SDL window: %s", SDL_GetError());
 
-	c->r = SDL_CreateRenderer(c->w, -1, SDL_RENDERER_PRESENTVSYNC);
-	if (!c->r)
-		errx(1, "Can't create SDL renderer: %s", SDL_GetError());
+	renderer_flags = SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED;
+
+	c->r = SDL_CreateRenderer(c->w, -1, renderer_flags);
+	if (!c->r) {
+		warnx("Falling back to SW renderer: %s", SDL_GetError());
+		renderer_flags &= ~SDL_RENDERER_ACCELERATED;
+		renderer_flags |= SDL_RENDERER_SOFTWARE;
+		c->r = SDL_CreateRenderer(c->w, -1, renderer_flags);
+		if (!c->r)
+			errx(1, "Can't create SW renderer: %s", SDL_GetError());
+	}
 
 	SDL_RenderSetLogicalSize(c->r, WIDTH, HEIGHT);
 	SDL_ShowCursor(SDL_DISABLE);
