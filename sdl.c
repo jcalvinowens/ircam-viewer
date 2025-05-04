@@ -153,6 +153,7 @@ static struct temp_fixp celsius_to_fahrenheit(struct temp_fixp t)
 }
 
 struct sdl_ctx {
+	const struct ircam_desc *desc;
 	SDL_Renderer *r;
 	SDL_Texture *t;
 	SDL_Window *w;
@@ -207,11 +208,14 @@ static SDL_Point calc_point_from_buf_offset(const struct sdl_ctx *c,
 					    const int offset)
 {
 	if (c->rotate) {
-		return (SDL_Point){ WIDTH - (offset / 2 % WIDTH),
-				    HEIGHT - (offset / 2 / WIDTH) };
+		return (SDL_Point){
+			c->desc->width - (offset / 2 % c->desc->width),
+			c->desc->height - (offset / 2 / c->desc->width)
+		};
 	}
 
-	return (SDL_Point){ offset / 2 % WIDTH, offset / 2 / WIDTH };
+	return (SDL_Point){ offset / 2 % c->desc->width,
+			    offset / 2 / c->desc->width };
 }
 
 static void update_crosshair_color(struct sdl_ctx *c)
@@ -291,39 +295,39 @@ static void showtexts(struct sdl_ctx *c, struct temp_fixp max,
 	if (c->paused && c->pb)
 		drawtext(c, 46, 21, "[PAUSE]");
 
-	drawtext(c, WIDTH - 40, 1, "[%05" PRIu32 ".%02" PRIu32 "]", seq / 25,
-		 (seq % 25) * 4);
+	drawtext(c, c->desc->width - 40, 1, "[%05" PRIu32 ".%02" PRIu32 "]",
+		 seq / 25, (seq % 25) * 4);
 
-	drawtext(c, WIDTH - 45, 8, "% 5" PRId64 " DROPS",
+	drawtext(c, c->desc->width - 45, 8, "% 5" PRId64 " DROPS",
 		 (int64_t)seq - c->frame_paint_seq);
 
 	if (c->showinithelp) {
-		drawtext(c, 90, 70, "HOLD [H] FOR HELP");
-		drawtext(c, 90, 84, "THIS PROGRAM COMES WITH");
-		drawtext(c, 90, 91, "ABSOLUTELY NO WARRANTY");
-		drawtext(c, 90, 98, "HOLD [L] FOR LICENSE");
+		drawtext(c, 90, 50, "HOLD [H] FOR HELP");
+		drawtext(c, 90, 64, "THIS PROGRAM COMES WITH");
+		drawtext(c, 90, 71, "ABSOLUTELY NO WARRANTY");
+		drawtext(c, 90, 78, "HOLD [L] FOR LICENSE");
 	}
 }
 
 static void showlicensetext(struct sdl_ctx *c)
 {
-	drawtext(c, 40, 33, "Linux Infrared Camera Viewer");
-	drawtext(c, 40, 40, "Copyright (C) 2024 Calvin Owens");
-	drawtext(c, 40, 54, "This program is free software: you can");
-	drawtext(c, 40, 61, "redistribute it and/or modify it under the");
-	drawtext(c, 40, 68, "terms of the GNU General Public License as");
-	drawtext(c, 40, 75, "published by the Free Software Foundation,");
-	drawtext(c, 40, 82, "either version 3 of the License, or (at");
-	drawtext(c, 40, 89, "your option) any later version.");
-	drawtext(c, 40, 103, "This program is distributed in the hope that");
-	drawtext(c, 40, 110, "it will be useful, but WITHOUT ANY WARRANTY;");
-	drawtext(c, 40, 117, "without even the implied warranty of");
-	drawtext(c, 40, 124, "MERCHANTABILITY or FITNESS FOR A PARTICULAR");
-	drawtext(c, 40, 131, "PURPOSE. See the GNU General Public License");
-	drawtext(c, 40, 138, "for more details.");
-	drawtext(c, 40, 152, "You should have received a copy of the GNU");
-	drawtext(c, 40, 159, "General Public License along with this");
-	drawtext(c, 40, 166, "program. If not see <www.gnu.org/licenses>.");
+	drawtext(c, 40, 31, "Linux Infrared Camera Viewer");
+	drawtext(c, 40, 38, "Copyright (C) 2024 Calvin Owens");
+	drawtext(c, 40, 52, "This program is free software: you can");
+	drawtext(c, 40, 59, "redistribute it and/or modify it under the");
+	drawtext(c, 40, 66, "terms of the GNU General Public License as");
+	drawtext(c, 40, 73, "published by the Free Software Foundation,");
+	drawtext(c, 40, 80, "either version 3 of the License, or (at");
+	drawtext(c, 40, 87, "your option) any later version.");
+	drawtext(c, 40, 101, "This program is distributed in the hope that");
+	drawtext(c, 40, 108, "it will be useful, but WITHOUT ANY WARRANTY;");
+	drawtext(c, 40, 115, "without even the implied warranty of");
+	drawtext(c, 40, 122, "MERCHANTABILITY or FITNESS FOR A PARTICULAR");
+	drawtext(c, 40, 129, "PURPOSE. See the GNU General Public License");
+	drawtext(c, 40, 136, "for more details.");
+	drawtext(c, 40, 150, "You should have received a copy of the GNU");
+	drawtext(c, 40, 157, "General Public License along with this");
+	drawtext(c, 40, 164, "program. If not see <www.gnu.org/licenses>.");
 }
 
 static void showhelptext(struct sdl_ctx *c)
@@ -494,7 +498,9 @@ static int sdl_poll_one(struct sdl_ctx *c, SDL_Event *evt, uint16_t min,
 			snprintf(path, sizeof(path), "%lld-rgb.mkv",
 				 (long long)time(NULL));
 
-			c->vrecord = lavc_start_encode(path, WIDTH, HEIGHT, FPS,
+			c->vrecord = lavc_start_encode(path, c->desc->width,
+						       c->desc->height,
+						       c->desc->fps,
 						       AV_PIX_FMT_BGRA);
 			break;
 
@@ -508,7 +514,7 @@ static int sdl_poll_one(struct sdl_ctx *c, SDL_Event *evt, uint16_t min,
 
 		case SDL_SCANCODE_RIGHT:
 			c->crosshair.x++;
-			if (c->crosshair.x >= WIDTH)
+			if (c->crosshair.x >= c->desc->width)
 				c->crosshair.x = 0;
 
 			break;
@@ -516,20 +522,20 @@ static int sdl_poll_one(struct sdl_ctx *c, SDL_Event *evt, uint16_t min,
 		case SDL_SCANCODE_LEFT:
 			c->crosshair.x--;
 			if (c->crosshair.x < 0)
-				c->crosshair.x = WIDTH - 1;
+				c->crosshair.x = c->desc->width - 1;
 
 			break;
 
 		case SDL_SCANCODE_UP:
 			c->crosshair.y--;
 			if (c->crosshair.y < 0)
-				c->crosshair.y = HEIGHT - 1;
+				c->crosshair.y = c->desc->height - 1;
 
 			break;
 
 		case SDL_SCANCODE_DOWN:
 			c->crosshair.y++;
-			if (c->crosshair.y >= HEIGHT)
+			if (c->crosshair.y >= c->desc->height)
 				c->crosshair.y = 0;
 
 			break;
@@ -604,14 +610,14 @@ int paint_frame(struct sdl_ctx *c, uint32_t seq, const uint8_t *data)
 	SDL_Rect rect;
 
 	// Get temperature at crosshair
-	i = c->crosshair.y * WIDTH * 2 + c->crosshair.x * 2;
+	i = c->crosshair.y * c->desc->width * 2 + c->crosshair.x * 2;
 	if (c->rotate) {
 		// Mirror crosshair if output is rotated
-		i = WIDTH * HEIGHT * 2 - i;
+		i = c->desc->width * c->desc->height * 2 - i;
 	}
 	ptemp = data[i] | data[i + 1] << 8;
 
-	for (i = 0; i < WIDTH * HEIGHT * 2; i += 2) {
+	for (i = 0; i < c->desc->width * c->desc->height * 2; i += 2) {
 		uint16_t v = data[i] | data[i + 1] << 8;
 		if (v > max) {
 			max = v;
@@ -625,8 +631,8 @@ int paint_frame(struct sdl_ctx *c, uint32_t seq, const uint8_t *data)
 
 	rect.y = 0;
 	rect.x = 0;
-	rect.w = WIDTH;
-	rect.h = HEIGHT;
+	rect.w = c->desc->width;
+	rect.h = c->desc->height;
 
 	if (SDL_LockTexture(c->t, &rect, (void **)&memptr, &pitch))
 		return -1;
@@ -643,7 +649,7 @@ int paint_frame(struct sdl_ctx *c, uint32_t seq, const uint8_t *data)
 	}
 
 	if (min >= max) {
-		memset(memptr, 0, WIDTH * HEIGHT * 4);
+		memset(memptr, 0, c->desc->width * c->desc->height * 4);
 		goto skippaint;
 	}
 
@@ -661,7 +667,7 @@ int paint_frame(struct sdl_ctx *c, uint32_t seq, const uint8_t *data)
 	 */
 
 	multinv = (1UL << 24) / ((uint32_t)max - min);
-	for (i = 0; i < WIDTH * HEIGHT * 2; i += 2) {
+	for (i = 0; i < c->desc->width * c->desc->height * 2; i += 2) {
 		uint32_t raw = (uint32_t)data[i] | data[i + 1] << 8;
 		uint8_t pval;
 
@@ -673,9 +679,15 @@ int paint_frame(struct sdl_ctx *c, uint32_t seq, const uint8_t *data)
 			pval = (multinv * (raw - min)) >> 16;
 
 		if (c->rotate) {
-			// Rotating the output by 180° is equivalent to iterating through the flattened RGBA array backwards,
-			// but still filling BGRA values in the same order (== subtract a constant of 4).
-			output_index = (WIDTH * HEIGHT - i / 2) * 4 - 4;
+			/*
+			 * Rotating the output by 180 is equivalent to iterating
+			 * through the flattened RGBA array backwards, but still
+			 * filling BGRA values in the same order (== subtract a
+			 * constant of 4).
+			 */
+			output_index =
+				(c->desc->width * c->desc->height - i / 2) * 4 -
+				4;
 		} else {
 			output_index = i / 2 * 4;
 		}
@@ -688,7 +700,7 @@ int paint_frame(struct sdl_ctx *c, uint32_t seq, const uint8_t *data)
 
 skippaint:
 	if (c->vrecord)
-		if (lavc_encode(c->vrecord, seq, memptr, VSIZE))
+		if (lavc_encode(c->vrecord, seq, memptr, c->desc->vsize))
 			err(1, "can't vrecord");
 
 	SDL_UnlockTexture(c->t);
@@ -701,7 +713,9 @@ skippaint:
 		showtexts(c, raw_to_celsius(orig_max), raw_to_celsius(ptemp),
 			  raw_to_celsius(orig_min), seq);
 
-		paint_colored_marker(c, &c->crosshair, 2, &c->crosshair_color);
+		if (!c->showhelp)
+			paint_colored_marker(c, &c->crosshair, 2,
+					     &c->crosshair_color);
 
 		if (c->show_min_max_marker && !c->paused) {
 			paint_colored_marker(c, &min_point, 1, &SDL_COLOR_BLUE);
@@ -731,7 +745,8 @@ skippaint:
  *
  * Return: SDL context handle on success, NULL on error.
  */
-struct sdl_ctx *sdl_open(int upscaled_width, int upscaled_height, bool pb,
+struct sdl_ctx *sdl_open(int upscaled_width, int upscaled_height,
+			 const struct ircam_desc *desc, bool pb,
 			 const char *fontpath, bool hidehelp, bool fullscreen)
 {
 	const char *window_name = "Linux V4L2/SDL2 IR Camera Viewer";
@@ -739,6 +754,7 @@ struct sdl_ctx *sdl_open(int upscaled_width, int upscaled_height, bool pb,
 	uint32_t window_flags, renderer_flags;
 	struct sdl_ctx *c;
 	char tmp[32];
+	void *p;
 
 	if (!fontpath) {
 		const uint8_t *src = &builtin_ttf_start;
@@ -761,6 +777,7 @@ struct sdl_ctx *sdl_open(int upscaled_width, int upscaled_height, bool pb,
 	if (!c)
 		return NULL;
 
+	c->desc = desc;
 	c->inittsmono = now_mono();
 	c->pb = pb;
 	c->colormap = 1;
@@ -768,8 +785,8 @@ struct sdl_ctx *sdl_open(int upscaled_width, int upscaled_height, bool pb,
 	c->fahren = 1;
 	c->contours = 1;
 	c->textval = 255;
-	c->crosshair.x = WIDTH / 2;
-	c->crosshair.y = HEIGHT / 2;
+	c->crosshair.x = c->desc->width / 2;
+	c->crosshair.y = c->desc->height / 2;
 	update_crosshair_color(c);
 	c->fontpath = strdup(fontpath);
 	c->fonttmp = font_tmpfile;
@@ -803,7 +820,7 @@ struct sdl_ctx *sdl_open(int upscaled_width, int upscaled_height, bool pb,
 			errx(1, "Can't create SW renderer: %s", SDL_GetError());
 	}
 
-	SDL_RenderSetLogicalSize(c->r, WIDTH, HEIGHT);
+	SDL_RenderSetLogicalSize(c->r, c->desc->width, c->desc->height);
 	SDL_ShowCursor(SDL_DISABLE);
 
 	/*
@@ -811,7 +828,8 @@ struct sdl_ctx *sdl_open(int upscaled_width, int upscaled_height, bool pb,
 	 * supports BGR. So we just use BGR everywhere...
 	 */
 	c->t = SDL_CreateTexture(c->r, SDL_PIXELFORMAT_BGRA32,
-				 SDL_TEXTUREACCESS_STREAMING, WIDTH, HEIGHT);
+				 SDL_TEXTUREACCESS_STREAMING, c->desc->width,
+				 c->desc->height);
 	if (!c->t)
 		errx(1, "Can't create SDL texture: %s", SDL_GetError());
 
@@ -819,6 +837,17 @@ struct sdl_ctx *sdl_open(int upscaled_width, int upscaled_height, bool pb,
 		errx(1, "Can't initialize SDL-TTF: %s", TTF_GetError());
 
 	sdl_open_fontcache(c);
+
+	/*
+	 * FIXME: Quick kludge to show something while V4L2 loads...
+	 */
+	c->pb = true;
+	c->paused = true;
+	p = alloca(c->desc->width * c->desc->height * 2);
+	memset(p, 0, c->desc->width * c->desc->height * 2);
+	paint_frame(c, 0, p);
+	c->paused = false;
+	c->pb = pb;
 	return c;
 }
 
@@ -830,6 +859,9 @@ struct sdl_ctx *sdl_open(int upscaled_width, int upscaled_height, bool pb,
  */
 void sdl_close(struct sdl_ctx *c)
 {
+	if (!c)
+		return;
+
 	FC_FreeFont(c->f);
 	free((void *)c->fontpath);
 	TTF_Quit();

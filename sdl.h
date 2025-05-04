@@ -17,6 +17,8 @@
 
 #pragma once
 
+#include "dev.h"
+
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -31,7 +33,8 @@ enum paint_frame_action {
 
 #ifndef IRCAM_NOSDL
 
-struct sdl_ctx *sdl_open(int upscaled_width, int upscaled_height, bool pb,
+struct sdl_ctx *sdl_open(int upscaled_width, int upscaled_height,
+			 const struct ircam_desc *desc, bool pb,
 			 const char *fontpath, bool hidehelp, bool fullscreen);
 
 int paint_frame(struct sdl_ctx *c, uint32_t seq, const uint8_t *data);
@@ -46,22 +49,22 @@ struct sdl_ctx {
 	bool unused;
 };
 
-static struct sdl_ctx *sdl_open(int upscaled_width, int upscaled_height,
-				bool pb, const char *fontpath, bool hidehelp,
-				bool fullscreen)
+static inline struct sdl_ctx *sdl_open(int w, int h, const struct ircam_desc *d,
+				       bool p, const char *f, bool i, bool l)
 {
-	return (void *)0xdecafbadULL;
+	return NULL;
 }
 
-static int paint_frame(struct sdl_ctx *c, uint32_t seq, const uint8_t *data)
+static inline int paint_frame(struct sdl_ctx *c, uint32_t s, const uint8_t *d)
 {
 	return NOTHING;
 }
 
-static void sdl_loop(struct sdl_ctx *c)
+static inline void sdl_loop(struct sdl_ctx *c)
 {
 }
-static void sdl_close(struct sdl_ctx *c)
+
+static inline void sdl_close(struct sdl_ctx *c)
 {
 }
 

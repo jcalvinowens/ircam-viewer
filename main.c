@@ -86,12 +86,70 @@ static int new_periodic_tfd(int64_t interval_ms)
 	return fd;
 }
 
-static void run_v4l2(struct sdl_ctx *ctx, const char *devpath)
+static void run_v4l2(const char *devpath, bool render_local)
 {
+	const struct ircam_desc *desc;
+	struct sdl_ctx *ctx = NULL;
 	struct v4l2_dev *dev;
+	char tmp[PATH_MAX];
 
-	dev = v4l2_open(devpath, V4L2_PIX_FMT_YUYV, WIDTH, HEIGHT * 2, FPS);
+	if (devpath) {
+		desc = lookup_camera_desc(devpath);
+		if (!desc) {
+			/*
+			 * FIXME: This will turn into a `--force-model` option
+			 * when multiple camera models are actually supported.
+			 */
+			warnx("%s looks incompatible, trying anyway", devpath);
+			desc = default_camera();
+		}
+	} else {
+		int i;
 
+		// FIXME: dumb
+		for (i = 0; i < 64; i++) {
+			snprintf(tmp, sizeof(tmp), "/dev/video%d", i);
+			desc = lookup_camera_desc(tmp);
+			if (desc) {
+				devpath = tmp;
+				goto found;
+			}
+		}
+
+		errx(1, "No compatible IR camera found!");
+	}
+
+found:
+	dev = v4l2_open(devpath, desc->v4l2_fmt, desc->width, desc->height * 2,
+			desc->fps);
+
+	if (remote_socket) {
+		struct ircam_desc desc_copy = *desc;
+		ircam_desc_hton(&desc_copy);
+
+		if (fwrite(&desc_copy, 1, sizeof(desc_copy), remote_socket) !=
+		    sizeof(desc_copy))
+			err(1, "remote socket not accepting data");
+	}
+
+	if (record_only) {
+		char path[PATH_MAX];
+
+		snprintf(path, sizeof(path), "%lld-raw.mkv",
+			 (long long)time(NULL));
+
+		record = lavc_start_encode(path, desc->width, desc->height,
+					   desc->fps, desc->ff_raw_fmt);
+	}
+
+	if (render_local) {
+		ctx = sdl_open(window_width, window_height, desc, false,
+			       fontpath, hide_init_help, fullscreen);
+		if (!ctx)
+			errx(1, "can't initialize libsdl");
+	}
+
+	v4l2_init_stream(dev);
 	while (!stop) {
 		struct v4l2_buffer buf = { 0 };
 		const uint8_t *data;
@@ -103,22 +161,26 @@ static void run_v4l2(struct sdl_ctx *ctx, const char *devpath)
 			err(1, "v4l2 failure");
 		}
 
-		if (buf.bytesused != ISKIP + ISIZE)
+		if (buf.bytesused != desc->iskip + desc->isize)
 			errx(1,
 			     "bad image size (%d != %d), is '%s' the "
 			     "correct device? Pass '-d' to specify a "
 			     "different one",
-			     buf.bytesused, ISIZE * 2, devpath);
+			     buf.bytesused, desc->isize * 2, devpath);
 
-		data = v4l2_buf_mmap(dev, &buf) + ISKIP;
+		data = v4l2_buf_mmap(dev, &buf) + desc->iskip;
 
 		if (record)
-			if (lavc_encode(record, buf.sequence, data, ISIZE))
+			if (lavc_encode(record, buf.sequence, data,
+					desc->isize))
 				err(1, "can't record");
 
 		if (remote_socket) {
-			if (fwrite(data, 1, ISIZE, remote_socket) != ISIZE)
-				err(1, "remote socket not accepting data");
+			if (fwrite(data, 1, desc->isize, remote_socket) !=
+			    desc->isize) {
+				warn("remote socket not accepting data");
+				goto out;
+			}
 		}
 
 		if (ctx) {
@@ -135,9 +197,10 @@ static void run_v4l2(struct sdl_ctx *ctx, const char *devpath)
 				snprintf(path, sizeof(path), "%lld-raw.mkv",
 					 (long long)time(NULL));
 
-				record = lavc_start_encode(path, WIDTH, HEIGHT,
-							   FPS,
-							   AV_PIX_FMT_GRAY16LE);
+				record = lavc_start_encode(path, desc->width,
+							   desc->height,
+							   desc->fps,
+							   desc->ff_raw_fmt);
 				break;
 
 			case QUIT_PROGRAM:
@@ -153,19 +216,32 @@ out:
 		record = NULL;
 	}
 
+	sdl_close(ctx);
 	v4l2_close(dev);
 }
 
-static void run_playback(struct sdl_ctx *ctx, const char *filepath)
+static void run_playback(const char *filepath)
 {
 	const uint8_t *data = NULL;
+	const struct ircam_desc *desc;
 	struct lavc_ctx *in_ctx;
+	struct sdl_ctx *ctx;
 	uint32_t seq = 0;
 	bool paused = 0;
 	int timer_fd;
 
+	/*
+	 * FIXME: Record the descriptor in the MKV metadata. For now, since we
+	 * only actually support one camera, we know what it has to be...
+	 */
+	desc = default_camera();
+
 	in_ctx = lavc_start_decode(filepath);
-	timer_fd = new_periodic_tfd(1000 / FPS);
+	timer_fd = new_periodic_tfd(1000 / desc->fps);
+	ctx = sdl_open(window_width, window_height, desc, true, fontpath,
+		       hide_init_help, fullscreen);
+	if (!ctx)
+		errx(1, "can't initialize libsdl");
 
 	while (!stop) {
 		uint64_t ticks;
@@ -197,12 +273,16 @@ static void run_playback(struct sdl_ctx *ctx, const char *filepath)
 	}
 
 out:
+	sdl_close(ctx);
 	close(timer_fd);
 	lavc_end_decode(in_ctx);
 }
 
-static void run_remote(struct sdl_ctx *ctx, const struct sockaddr_in6 *src)
+static void run_remote(const struct sockaddr_in6 *src)
 {
+	struct ircam_desc desc;
+	struct sdl_ctx *ctx;
+	char path[PATH_MAX];
 	uint32_t seq = 0;
 	int fd;
 
@@ -210,28 +290,62 @@ static void run_remote(struct sdl_ctx *ctx, const struct sockaddr_in6 *src)
 	if (fd == -1)
 		errx(1, "Can't connect");
 
+	if (read(fd, &desc, sizeof(desc)) != sizeof(desc))
+		errx(1, "Can't get camera descriptor");
+
+	ircam_desc_ntoh(&desc);
+	ctx = sdl_open(window_width, window_height, &desc, false, fontpath,
+		       hide_init_help, fullscreen);
+	if (!ctx)
+		errx(1, "can't initialize libsdl");
+
 	while (!stop) {
-		uint8_t data[ISIZE];
+		uint8_t data[desc.isize];
 		size_t off = 0;
 		ssize_t ret;
 
 		do {
-			ret = read(fd, data + off, ISIZE - off);
+			ret = read(fd, data + off, desc.isize - off);
 			if (ret <= 0)
 				break;
 
-		} while ((off += ret) < ISIZE);
+		} while ((off += ret) < desc.isize);
 
-		if (off != ISIZE)
+		if (off != desc.isize)
 			goto out;
+
+		if (record)
+			if (lavc_encode(record, seq, data, desc.isize))
+				err(1, "can't record");
 
 		switch (paint_frame(ctx, ++seq, data)) {
 		case QUIT_PROGRAM:
 			goto out;
+
+		case TOGGLE_Y16_RECORD:
+			if (record) {
+				lavc_end_encode(record);
+				record = NULL;
+				break;
+			}
+
+			snprintf(path, sizeof(path), "%lld-raw.mkv",
+				 (long long)time(NULL));
+
+			record = lavc_start_encode(path, desc.width,
+						   desc.height, desc.fps,
+						   desc.ff_raw_fmt);
+			break;
 		}
 	}
 
 out:
+	if (record) {
+		lavc_end_encode(record);
+		record = NULL;
+	}
+
+	sdl_close(ctx);
 	close(fd);
 }
 
@@ -266,7 +380,6 @@ int main(int argc, char **argv)
 	};
 	char *v4l2dev = NULL;
 	char *filepath = NULL;
-	struct sdl_ctx *ctx;
 
 	sigaction(SIGINT, &stop_action, NULL);
 	sigaction(SIGTERM, &stop_action, NULL);
@@ -326,9 +439,6 @@ int main(int argc, char **argv)
 	}
 done:
 
-	if (!v4l2dev && !filepath && !video_srcaddr.sin6_family)
-		v4l2dev = strdup("/dev/video0");
-
 	if (v4l2dev && filepath)
 		show_help_and_die();
 
@@ -339,16 +449,6 @@ done:
 		show_help_and_die();
 
 	if (record_only || listen_only) {
-		if (record_only) {
-			char path[PATH_MAX];
-
-			snprintf(path, sizeof(path), "%lld-raw.mkv",
-				 (long long)time(NULL));
-
-			record = lavc_start_encode(path, WIDTH, HEIGHT, FPS,
-						   AV_PIX_FMT_GRAY16LE);
-		}
-
 		if (listen_only) {
 			remote_socket =
 				fdopen(get_stream_listen_one(8888), "w");
@@ -356,25 +456,18 @@ done:
 				err(1, "Error on remote socket");
 		}
 
-		run_v4l2(NULL, v4l2dev);
+		run_v4l2(v4l2dev, false);
 		goto out;
 	}
 
-	ctx = sdl_open(window_width, window_height, !!filepath, fontpath,
-		       hide_init_help, fullscreen);
-	if (!ctx)
-		errx(1, "can't initialize libsdl");
-
 	if (filepath) {
-		run_playback(ctx, filepath);
-	} else if (v4l2dev) {
-		run_v4l2(ctx, v4l2dev);
+		run_playback(filepath);
 	} else if (video_srcaddr.sin6_family) {
 		video_srcaddr.sin6_port = htons(8888);
-		run_remote(ctx, &video_srcaddr);
+		run_remote(&video_srcaddr);
+	} else {
+		run_v4l2(v4l2dev, true);
 	}
-
-	sdl_close(ctx);
 out:
 	free((void *)fontpath);
 	free(v4l2dev);

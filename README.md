@@ -40,7 +40,7 @@ Building
 `$ make -j -s`
 
 If you only plan to use the program in headless mode (-n and/or -l), you can use
-the `nosdl` target to build a binary which does not depend on SDL2:
+the `nosdl` target to build a smaller binary which does not depend on SDL2:
 
 `$ sudo apt install libavcodec-dev libavformat-dev`
 
@@ -60,7 +60,11 @@ pre-built disk images on the
 Viewing
 -------
 
-`$ ./ircam -d /dev/video4`
+`$ ./ircam`
+
+The program should autodetect your IR camera: if for some reason it doesn't, or
+if you have multiple IR cameras connected, you can force the program to connect
+to a specific camera using the `-d` flag, i.e. `./ircam -d /dev/video4`.
 
 ![](https://static.wbinvd.org/img/ircam/ss4.png)
 
@@ -109,6 +113,8 @@ recorded), and the [F] key will toggle units between Celsius and Fahrenheit.
 The arrow keys move the cross, which is where the point temperature is from.
 
 ![](https://static.wbinvd.org/img/ircam/ss10.png)
+
+The [M] key toggles small blue/red min/max markers, and [U] flips the screen.
 
 Recording
 ---------
@@ -164,8 +170,9 @@ Then, connect to its IP address from the other system:
 ...replacing '1.2.3.4' with the appropriate address on your network.
 
 Any recorded video is stored locally as usual. It is possible to combine both
--l and -n, but the recording will not begin until a remote client connects. For
-uses where no GUI is required, build the "nosdl" target as described above.
+-l and -n, but the recording will not begin until a remote client connects.
+
+For uses where no GUI is required, build the "nosdl" target as described above.
 
 Converting Video
 ----------------

@@ -17,12 +17,19 @@
 
 #pragma once
 
+#include "dev.h"
+
 #include <stdint.h>
+#include <stdbool.h>
 #include <linux/videodev2.h>
 
 struct v4l2_dev;
 
+bool v4l2_matches_desc(const char *path, const struct ircam_desc *desc);
+
 struct v4l2_dev *v4l2_open(const char *path, uint32_t fmt, int w, int h, int f);
+
+void v4l2_init_stream(struct v4l2_dev *dev);
 
 int v4l2_get_buffer(struct v4l2_dev *dev, struct v4l2_buffer *buf);
 

@@ -19,6 +19,7 @@
 
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
 #include <unistd.h>
 #include <errno.h>
 #include <err.h>
@@ -27,6 +28,8 @@
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <sys/types.h>
+
+#include "dev.h"
 
 #define MAXBUFS 64
 
@@ -38,6 +41,114 @@ struct v4l2_dev {
 	unsigned buffer_lens[MAXBUFS];
 	void *mmaps[MAXBUFS];
 };
+
+static bool v4l2_search_ivals(const struct ircam_desc *desc,
+			      struct v4l2_dev *dev,
+			      const struct v4l2_fmtdesc *fmt, int width,
+			      int height)
+{
+	int i;
+
+	for (i = 0;; i++) {
+		struct v4l2_frmivalenum ival = {
+			.pixel_format = fmt->pixelformat,
+			.width = width,
+			.height = height,
+			.index = i,
+		};
+
+		if (ioctl(dev->v4l2_fd, VIDIOC_ENUM_FRAMEINTERVALS, &ival))
+			break;
+
+		switch (ival.type) {
+		case V4L2_FRMIVAL_TYPE_DISCRETE:
+			if (width == desc->v4l2_width &&
+			    height == desc->v4l2_height &&
+			    desc->v4l2_fmt == fmt->pixelformat &&
+			    desc->fps == ival.discrete.denominator)
+				return true;
+
+			break;
+
+		case V4L2_FRMIVAL_TYPE_STEPWISE:
+		case V4L2_FRMIVAL_TYPE_CONTINUOUS:
+			warnx("Ignoring STEPWISE/CONTINUOUS FRMIVAL");
+			break;
+		}
+	}
+
+	return false;
+}
+
+static bool v4l2_search_sizes(const struct ircam_desc *desc,
+			      struct v4l2_dev *dev,
+			      const struct v4l2_fmtdesc *fmt)
+{
+	int i;
+
+	for (i = 0;; i++) {
+		struct v4l2_frmsizeenum size = {
+			.pixel_format = fmt->pixelformat,
+			.index = i,
+		};
+
+		if (ioctl(dev->v4l2_fd, VIDIOC_ENUM_FRAMESIZES, &size))
+			break;
+
+		switch (size.type) {
+		case V4L2_FRMSIZE_TYPE_DISCRETE:
+			if (v4l2_search_ivals(desc, dev, fmt,
+					      size.discrete.width,
+					      size.discrete.height))
+				return true;
+
+			break;
+
+		case V4L2_FRMSIZE_TYPE_STEPWISE:
+			/* fall through */
+
+		case V4L2_FRMSIZE_TYPE_CONTINUOUS:
+			warnx("FRMSIZE is STEPWISE/CONTINUOUS, trying max/min");
+
+			if (v4l2_search_ivals(desc, dev, fmt,
+					      size.stepwise.min_width,
+					      size.stepwise.min_height))
+				return true;
+
+			if (v4l2_search_ivals(desc, dev, fmt,
+					      size.stepwise.max_width,
+					      size.stepwise.max_height))
+				return true;
+
+			break;
+		};
+	}
+
+	return false;
+}
+
+static bool v4l2_search_formats(const struct ircam_desc *desc,
+				struct v4l2_dev *dev)
+{
+	int i;
+
+	for (i = 0;; i++) {
+		struct v4l2_fmtdesc fmt = {
+			.type = V4L2_BUF_TYPE_VIDEO_CAPTURE,
+			.index = i,
+		};
+		char pixfmt[5] = { 0 };
+
+		if (ioctl(dev->v4l2_fd, VIDIOC_ENUM_FMT, &fmt))
+			break;
+
+		memcpy(pixfmt, &fmt.pixelformat, 4);
+		if (v4l2_search_sizes(desc, dev, &fmt))
+			return true;
+	}
+
+	return false;
+}
 
 static int v4l2_set_format(struct v4l2_dev *dev,
 			   const struct v4l2_pix_format *pix)
@@ -62,7 +173,14 @@ static int v4l2_set_rate(struct v4l2_dev *dev, const struct v4l2_fract *fp)
 	return ioctl(dev->v4l2_fd, VIDIOC_S_PARM, &parm);
 }
 
-static void v4l2_init_stream(struct v4l2_dev *dev)
+/**
+ * v4l2_init_stream() - Begin V4L2 streaming.
+ *
+ * Actually begin streaming from the open V4L2 device.
+ *
+ * Return: Nothing.
+ */
+void v4l2_init_stream(struct v4l2_dev *dev)
 {
 	struct v4l2_buffer bufs[MAXBUFS];
 	struct v4l2_requestbuffers req = {
@@ -158,8 +276,36 @@ struct v4l2_dev *v4l2_open(const char *path, uint32_t fmt, int width,
 	if (v4l2_set_rate(dev, &fp))
 		err(1, "VIDIOC_S_PARM");
 
-	v4l2_init_stream(dev);
 	return dev;
+}
+
+/**
+ * v4l2_matches_desc() - Check if a driver description matches a local device.
+ * @param path Path to V4L2 device to check
+ * @param desc Path to descriptor we are validating
+ *
+ * Test the width/height/fps/format to see if they match the desription for a
+ * specific IR camera this program supports.
+ *
+ * Return: True if a match is found, False otherwise.
+ */
+bool v4l2_matches_desc(const char *path, const struct ircam_desc *desc)
+{
+	struct v4l2_dev dev;
+	bool match = false;
+
+	memset(&dev, 0, sizeof(dev));
+	dev.v4l2_fd = open(path, O_RDWR);
+	if (dev.v4l2_fd == -1)
+		goto out;
+
+	if (ioctl(dev.v4l2_fd, VIDIOC_QUERYCAP, &dev.cap))
+		err(1, "VIDIOC_QUERYCAP");
+
+	match = v4l2_search_formats(desc, &dev);
+	close(dev.v4l2_fd);
+out:
+	return match;
 }
 
 /**

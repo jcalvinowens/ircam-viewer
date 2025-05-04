@@ -17,8 +17,8 @@ nosdl: ircam-nosdl
 debug: CFLAGS := -g -Og -fsanitize=address $(BASE_CFLAGS)
 debug: all
 
-FMTSRCS = inet.c inet.h lavc.c lavc.h main.c sdl.c sdl.h v4l2.c v4l2.h \
-	  util/kfwd.c
+FMTSRCS = inet.c inet.h lavc.c lavc.h main.c sdl.c sdl.h v4l2.c v4l2.h dev.c \
+	  dev.h util/kfwd.c
 
 format:
 	clang-format -i $(FMTSRCS)
@@ -26,11 +26,11 @@ format:
 sdl.s: gamma.h
 sdl.o: gamma.h
 
-ircam: main.o v4l2.o lavc.o inet.o sdl.o fontcache.o builtin.o
+ircam: main.o dev.o v4l2.o lavc.o inet.o sdl.o fontcache.o builtin.o
 	$(CC) -o $@ $^ $(CFLAGS) $(LDFLAGS) -lSDL2 -lSDL2_ttf -lavcodec -lavutil -lavformat
 
 ircam-nosdl: CFLAGS += -DIRCAM_NOSDL -Wno-unused-parameter
-ircam-nosdl: main.o v4l2.o lavc.o inet.o
+ircam-nosdl: main.o dev.o v4l2.o lavc.o inet.o
 	$(CC) -o $@ $^ $(CFLAGS) $(LDFLAGS) -lavcodec -lavutil -lavformat
 
 util/kfwd: util/kfwd.o

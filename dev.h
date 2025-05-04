@@ -17,29 +17,52 @@
 
 #pragma once
 
-/*
- * Constants for TOPDON TC001
- *
- * The device is a simple uvcvideo camera. It claims to provide 256x384 YUYV
- * (yuyv422) video, but it actually gives you two different views of the same
- * 16-bit 256x192 image data concatenated together. If you want a quick look:
- *
- *   ffplay -f v4l2 -input_format yuyv422 -video_size 256x384 -i /dev/video0
- *
- * The first bitmap isn't actually YUV: it's really just an 8-bit grayscale
- * bitmap with a garbage byte inserted between each real byte. The garbage byte
- * is 0x80, so treating it as though it is YUYV or YVYU and converting it to
- * RGB will waste CPU but ultimately give you a grayscale image. It is
- * dynamically scaled, and contains a strict subset of the data in the second
- * bitmap. We can just ignore it.
- *
- * The second bitmap is all we actually need: a true unscaled Y16 bitmap of the
- * raw temperature values detected by the IR camera sensor.
- */
+#include <endian.h>
+#include <stdint.h>
 
-#define WIDTH		256
-#define HEIGHT		192
-#define FPS		25
-#define ISIZE		(WIDTH * HEIGHT * 2) // gray16le
-#define ISKIP		ISIZE // Skip 8-bit image (see above)
-#define VSIZE		(WIDTH * HEIGHT * 4) // rgba
+struct ircam_desc {
+	int32_t width;
+	int32_t height;
+	uint32_t fps;
+	uint32_t isize;
+	uint32_t iskip;
+	uint32_t vsize;
+	int32_t v4l2_width;
+	int32_t v4l2_height;
+	uint32_t v4l2_fmt;
+	uint32_t ff_raw_fmt;
+	const char name[64];
+};
+
+#define NTOH(n) desc->n = le32toh(desc->n)
+static inline void ircam_desc_ntoh(struct ircam_desc *desc)
+{
+	NTOH(width);
+	NTOH(height);
+	NTOH(fps);
+	NTOH(isize);
+	NTOH(iskip);
+	NTOH(vsize);
+	NTOH(v4l2_width);
+	NTOH(v4l2_height);
+	NTOH(ff_raw_fmt);
+}
+#undef NTOH
+
+#define HTON(n) desc->n = htole32(desc->n)
+static inline void ircam_desc_hton(struct ircam_desc *desc)
+{
+	HTON(width);
+	HTON(height);
+	HTON(fps);
+	HTON(isize);
+	HTON(iskip);
+	HTON(vsize);
+	HTON(v4l2_width);
+	HTON(v4l2_height);
+	HTON(ff_raw_fmt);
+}
+#undef HTON
+
+const struct ircam_desc *default_camera(void);
+const struct ircam_desc *lookup_camera_desc(const char *path);
