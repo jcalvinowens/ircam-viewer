@@ -43,15 +43,15 @@
 #include "sdl.h"
 #include "inet.h"
 
-static int record_only;
+static bool record_only;
 static struct lavc_ctx *record;
 static int window_width = 1440;
 static int window_height = 1080;
 static const char *fontpath;
-static int listen_only;
+static bool listen_only;
 static FILE *remote_socket;
-static int hide_init_help;
-static int fullscreen;
+static bool hide_init_help;
+static bool fullscreen;
 
 static sig_atomic_t stop;
 
@@ -394,7 +394,7 @@ int main(int argc, char **argv)
 			v4l2dev = strdup(optarg);
 			break;
 		case 'n':
-			record_only = 1;
+			record_only = true;
 			break;
 		case 'p':
 			filepath = strdup(optarg);
@@ -410,7 +410,7 @@ int main(int argc, char **argv)
 			fontpath = strdup(optarg);
 			break;
 		case 'l':
-			listen_only = 1;
+			listen_only = true;
 			break;
 		case 'c':
 			video_srcaddr.sin6_family = AF_INET6;
@@ -425,10 +425,10 @@ int main(int argc, char **argv)
 
 			errx(1, "Can't parse address '%s'", optarg);
 		case 'q':
-			hide_init_help = 1;
+			hide_init_help = true;
 			break;
 		case 'F':
-			fullscreen = 1;
+			fullscreen = true;
 			break;
 		case 'h':
 		default:
