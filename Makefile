@@ -11,7 +11,7 @@ WFLAGS = -Wall -Wextra -Wstrict-prototypes -Wmissing-prototypes -Wno-switch \
 	 -Wformat=2 -Wstrict-aliasing -Wno-unknown-warning-option \
 	 -Wno-format-nonliteral -Wpedantic
 
-all: ircam util/kfwd
+all: ircam util/kfwd util/sisyphus
 nosdl: ircam-nosdl
 
 debug: CFLAGS := -g -Og -fsanitize=address $(BASE_CFLAGS)
@@ -36,6 +36,9 @@ ircam-nosdl: main.o dev.o v4l2.o lavc.o inet.o
 util/kfwd: util/kfwd.o
 	$(CC) -o $@ $^ $(CFLAGS) $(LDFLAGS)
 
+util/sisyphus: util/sisyphus.o
+	$(CC) -o $@ $^ $(CFLAGS) $(LDFLAGS)
+
 gamma.h:
 	./util/gamma.py > gamma.h
 
@@ -53,4 +56,4 @@ fontcache.o: fontcache.c
 	$(CC) $< $(CFLAGS) -c -o $@
 
 clean:
-	rm -f ircam ircam-nosdl util/kfwd *.o fonts/*.o util/*.o
+	rm -f ircam ircam-nosdl util/kfwd util/sisyphus *.o fonts/*.o util/*.o

@@ -1,6 +1,7 @@
 ircam
 ircam-nosdl
 kfwd
+sisyphus
 *.o
 *.s
 !builtin.s
