@@ -19,6 +19,7 @@ These IR camera models are known to be supported:
 
 * A-BF RX-450
 * TOPDON TC001
+* TOPDON TS001
 * InfiRay P2 Pro
 
 If your camera works but isn't in the list above, please file a PR on github or
