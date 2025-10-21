@@ -56,6 +56,26 @@ static const struct ircam_desc supported_descs[] = {
 		.ff_raw_fmt = AV_PIX_FMT_GRAY16LE,
 		.name = "TOPDON TC001 or compatible",
 	},
+	/*
+	 * Thermal Master P2
+	 *
+	 * The device is functionally similar to above TOPDON TC001 with
+	 * two added pixel-rows for some meta information that must be skipped
+	 * (updated .iskip and .v4l2_height)
+	 */
+	{
+		.width = 256,
+		.height = 192,
+		.fps = 25,
+		.isize = 256 * 192 * 2, // gray16le
+		.iskip = 256 * 194 * 2, // Skip 8-bit image + 2 rows (see above)
+		.vsize = 256 * 192 * 4, // RGBA
+		.v4l2_width = 256,
+		.v4l2_height = 386, // Contains 2 additional rows metadata
+		.v4l2_fmt = V4L2_PIX_FMT_YUYV,
+		.ff_raw_fmt = AV_PIX_FMT_GRAY16LE,
+		.name = "Thermal Master P2 or compatible",
+	},
 };
 
 static unsigned int nr_camera_descs(void)
