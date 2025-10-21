@@ -21,6 +21,7 @@ These IR camera models are known to be supported:
 * TOPDON TC001
 * TOPDON TS001
 * InfiRay P2 Pro
+* Thermal Master P2
 
 If your camera works but isn't in the list above, please file a PR on github or
 codeberg to add it.
