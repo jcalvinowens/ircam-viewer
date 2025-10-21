@@ -60,7 +60,7 @@ static const struct ircam_desc supported_descs[] = {
 
 static unsigned int nr_camera_descs(void)
 {
-	return sizeof(supported_descs[0]) / sizeof(supported_descs);
+	return sizeof(supported_descs) / sizeof(supported_descs[0]);
 }
 
 /**
