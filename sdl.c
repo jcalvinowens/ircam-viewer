@@ -254,6 +254,35 @@ static void showtexts(struct sdl_ctx *c, struct temp_fixp max,
 {
 	char s = 'C';
 
+	// Approximate temperatures for IR webcam.
+	// This is not a thermal imaging camera.
+	// So temperature readings are NOT accurate.
+	if (!strcmp(c->desc->name, "Chicony Integrated IR Camera")) {
+		uint32_t ptemp_full;
+		uint32_t max_full;
+		min.sign   ^= 1;
+		ptemp.sign ^= 1;
+		max.sign   ^= 1;
+		ptemp.major = min.major - ptemp.major;
+		ptemp.minor = min.minor - ptemp.minor;
+		max.major = min.major - max.major;
+		max.minor = min.minor - max.minor;
+		min.major = 0;
+		min.minor = 0;
+
+		// Do a little fixed-point math to multiply x 12
+		ptemp_full = (ptemp.major << 6) | ptemp.minor;
+		max_full = (max.major << 6) | max.minor;
+
+		ptemp_full *= 12;
+		max_full *= 12;
+
+		ptemp.major = ptemp_full >> 6;
+		ptemp.minor = ptemp_full & 0x3F;
+		max.major = max_full >> 6;
+		max.minor = max_full & 0x3F;
+	}
+
 	if (c->fahren) {
 		s = 'F';
 		max = celsius_to_fahrenheit(max);
