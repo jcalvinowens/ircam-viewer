@@ -604,21 +604,31 @@ int paint_frame(struct sdl_ctx *c, uint32_t seq, const uint8_t *data)
 	uint32_t multinv;
 	uint32_t output_index;
 	int ret = NOTHING;
-	int pitch, i;
+	int pitch;
+	size_t i;
 	uint8_t *memptr;
 	SDL_Event evt;
 	SDL_Rect rect;
 
 	// Get temperature at crosshair
-	i = c->crosshair.y * c->desc->width * 2 + c->crosshair.x * 2;
-	if (c->rotate) {
-		// Mirror crosshair if output is rotated
-		i = c->desc->width * c->desc->height * 2 - i;
+	if (c->desc->ff_raw_fmt == AV_PIX_FMT_GRAY16LE) {
+		i = c->crosshair.y * c->desc->width * 2 + c->crosshair.x * 2;
+		if (c->rotate) {
+			// Mirror crosshair if output is rotated
+			i = c->desc->width * c->desc->height * 2 - i;
+		}
+		ptemp = data[i] | data[i + 1] << 8;
+	} else {
+		i = c->crosshair.y * c->desc->width + c->crosshair.x;
+		if (c->rotate) {
+			i = c->desc->width * c->desc->height - i;
+		}
+		ptemp = data[i];
 	}
-	ptemp = data[i] | data[i + 1] << 8;
 
-	for (i = 0; i < c->desc->width * c->desc->height * 2; i += 2) {
-		uint16_t v = data[i] | data[i + 1] << 8;
+	if (c->desc->ff_raw_fmt == AV_PIX_FMT_GRAY16LE) {
+		for (i = 0; i < c->desc->isize; i += 2) {
+			uint16_t v = data[i] | data[i + 1] << 8;
 		if (v > max) {
 			max = v;
 			max_point = calc_point_from_buf_offset(c, i);
@@ -627,6 +637,20 @@ int paint_frame(struct sdl_ctx *c, uint32_t seq, const uint8_t *data)
 			min = v;
 			min_point = calc_point_from_buf_offset(c, i);
 		}
+		}
+	} else {
+		for (i = 0; i < c->desc->isize; i++) {
+			uint16_t v = data[i];
+			if (v > max) {
+				max = v;
+				max_point = calc_point_from_buf_offset(c, i * 2);
+			}
+			if (v < min) {
+				min = v;
+				min_point = calc_point_from_buf_offset(c, i * 2);
+			}
+		}
+		max = 255;
 	}
 
 	rect.y = 0;
@@ -667,9 +691,16 @@ int paint_frame(struct sdl_ctx *c, uint32_t seq, const uint8_t *data)
 	 */
 
 	multinv = (1UL << 24) / ((uint32_t)max - min);
-	for (i = 0; i < c->desc->width * c->desc->height * 2; i += 2) {
-		uint32_t raw = (uint32_t)data[i] | data[i + 1] << 8;
+	for (i = 0; i < c->desc->isize;
+	     i += (c->desc->ff_raw_fmt == AV_PIX_FMT_GRAY16LE) ? 2 : 1) {
+		uint32_t raw;
 		uint8_t pval;
+		int pixel_index;
+		if (c->desc->ff_raw_fmt == AV_PIX_FMT_GRAY16LE) {
+			raw = (uint32_t)data[i] | data[i + 1] << 8;
+		} else {
+			raw = data[i];
+		}
 
 		if (raw <= min)
 			pval = 0;
@@ -678,6 +709,9 @@ int paint_frame(struct sdl_ctx *c, uint32_t seq, const uint8_t *data)
 		else
 			pval = (multinv * (raw - min)) >> 16;
 
+		pixel_index =
+			(c->desc->ff_raw_fmt == AV_PIX_FMT_GRAY16LE) ? i / 2 : i;
+
 		if (c->rotate) {
 			/*
 			 * Rotating the output by 180 is equivalent to iterating
@@ -685,11 +719,9 @@ int paint_frame(struct sdl_ctx *c, uint32_t seq, const uint8_t *data)
 			 * filling BGRA values in the same order (== subtract a
 			 * constant of 4).
 			 */
-			output_index =
-				(c->desc->width * c->desc->height - i / 2) * 4 -
-				4;
+			output_index = (c->desc->width * c->desc->height - pixel_index) * 4 - 4;
 		} else {
-			output_index = i / 2 * 4;
+			output_index = pixel_index * 4;
 		}
 
 		memptr[output_index] = getcolor(c, BLUE, pval);

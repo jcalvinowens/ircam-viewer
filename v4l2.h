@@ -39,3 +39,5 @@ const uint8_t *v4l2_buf_mmap(const struct v4l2_dev *dev,
 void v4l2_put_buffer(struct v4l2_dev *dev, const struct v4l2_buffer *buf);
 
 void v4l2_close(struct v4l2_dev *dev);
+
+void v4l2_dump_info(const char *path);

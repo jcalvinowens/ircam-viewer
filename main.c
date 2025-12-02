@@ -96,12 +96,7 @@ static void run_v4l2(const char *devpath, bool render_local)
 	if (devpath) {
 		desc = lookup_camera_desc(devpath);
 		if (!desc) {
-			/*
-			 * FIXME: This will turn into a `--force-model` option
-			 * when multiple camera models are actually supported.
-			 */
-			warnx("%s looks incompatible, trying anyway", devpath);
-			desc = default_camera();
+			errx(1, "No compatible IR camera found for %s!", devpath);
 		}
 	} else {
 		int i;
@@ -162,11 +157,11 @@ found:
 		}
 
 		if (buf.bytesused != desc->iskip + desc->isize)
-			errx(1,
-			     "bad image size (%d != %d), is '%s' the "
+			errx(1, "bad image size (%u != %u), is '%s' the "
 			     "correct device? Pass '-d' to specify a "
-			     "different one",
-			     buf.bytesused, desc->isize * 2, devpath);
+			     "different one.",
+			     buf.bytesused, desc->iskip + desc->isize,
+			     devpath);
 
 		data = v4l2_buf_mmap(dev, &buf) + desc->iskip;
 
@@ -387,7 +382,7 @@ int main(int argc, char **argv)
 	sigaction(SIGHUP, &ignore_action, NULL);
 
 	while (1) {
-		int i = getopt_long(argc, argv, "hd:p:nw:f:lc:qF", opts, NULL);
+		int i = getopt_long(argc, argv, "hd:p:nw:f:lc:qFi:", opts, NULL);
 
 		switch (i) {
 		case 'd':
@@ -429,6 +424,10 @@ int main(int argc, char **argv)
 			break;
 		case 'F':
 			fullscreen = true;
+			break;
+		case 'i':
+			v4l2_dump_info(optarg);
+			exit(0);
 			break;
 		case 'h':
 		default:
