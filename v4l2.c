@@ -16,7 +16,7 @@
  */
 
 #include "v4l2.h"
-
+#include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
@@ -394,4 +394,80 @@ void v4l2_close(struct v4l2_dev *dev)
 
 	close(dev->v4l2_fd);
 	free(dev);
+}
+
+/**
+ * v4l2_dump_info() - Print all formats supported by a V4L2 device.
+ * @param path Path to V4L2 device to check
+ *
+ * Return: Nothing. Dies on error.
+ */
+void v4l2_dump_info(const char *path)
+{
+	struct v4l2_dev dev;
+	int i, j, k;
+
+	memset(&dev, 0, sizeof(dev));
+	dev.v4l2_fd = open(path, O_RDWR);
+	if (dev.v4l2_fd == -1)
+		err(1, "Can't open '%s'", path);
+
+	if (ioctl(dev.v4l2_fd, VIDIOC_QUERYCAP, &dev.cap))
+		err(1, "VIDIOC_QUERYCAP");
+
+	printf("formats for %s:\n", path);
+	for (i = 0;; i++) {
+		struct v4l2_fmtdesc fmt = {
+			.type = V4L2_BUF_TYPE_VIDEO_CAPTURE,
+			.index = i,
+		};
+		char pixfmt[5] = { 0 };
+
+		if (ioctl(dev.v4l2_fd, VIDIOC_ENUM_FMT, &fmt))
+			break;
+
+		memcpy(pixfmt, &fmt.pixelformat, 4);
+		printf("\t%s:\n", pixfmt);
+
+		for (j = 0;; j++) {
+			struct v4l2_frmsizeenum size = {
+				.pixel_format = fmt.pixelformat,
+				.index = j,
+			};
+
+			if (ioctl(dev.v4l2_fd, VIDIOC_ENUM_FRAMESIZES, &size))
+				break;
+
+			if (size.type != V4L2_FRMSIZE_TYPE_DISCRETE) {
+				warnx("non-discrete frame size not supported");
+				continue;
+			}
+
+			printf("\t\t%dx%d:\n", size.discrete.width,
+			       size.discrete.height);
+
+			for (k = 0;; k++) {
+				struct v4l2_frmivalenum ival = {
+					.pixel_format = fmt.pixelformat,
+					.width = size.discrete.width,
+					.height = size.discrete.height,
+					.index = k,
+				};
+
+				if (ioctl(dev.v4l2_fd,
+					    VIDIOC_ENUM_FRAMEINTERVALS, &ival))
+					break;
+
+				if (ival.type != V4L2_FRMIVAL_TYPE_DISCRETE) {
+					warnx("non-discrete frame interval not supported");
+					continue;
+				}
+
+				printf("\t\t\t%dfps\n",
+				       ival.discrete.denominator);
+			}
+		}
+	}
+
+	close(dev.v4l2_fd);
 }

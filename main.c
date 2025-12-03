@@ -91,17 +91,14 @@ static void run_v4l2(const char *devpath, bool render_local)
 	const struct ircam_desc *desc;
 	struct sdl_ctx *ctx = NULL;
 	struct v4l2_dev *dev;
+	uint8_t *prev_frame_data = NULL;
+	uint8_t *avg_frame_data = NULL;
 	char tmp[PATH_MAX];
 
 	if (devpath) {
 		desc = lookup_camera_desc(devpath);
 		if (!desc) {
-			/*
-			 * FIXME: This will turn into a `--force-model` option
-			 * when multiple camera models are actually supported.
-			 */
-			warnx("%s looks incompatible, trying anyway", devpath);
-			desc = default_camera();
+			errx(1, "No compatible IR camera found for %s!", devpath);
 		}
 	} else {
 		int i;
@@ -122,6 +119,13 @@ static void run_v4l2(const char *devpath, bool render_local)
 found:
 	dev = v4l2_open(devpath, desc->v4l2_fmt, desc->width, desc->height * 2,
 			desc->fps);
+
+	if (strcmp(desc->name, "Chicony Integrated IR Camera") == 0) {
+		prev_frame_data = malloc(desc->isize);
+		avg_frame_data = malloc(desc->isize);
+		if (!prev_frame_data || !avg_frame_data)
+			err(1, "failed to allocate frame buffers for averaging");
+	}
 
 	if (remote_socket) {
 		struct ircam_desc desc_copy = *desc;
@@ -162,13 +166,32 @@ found:
 		}
 
 		if (buf.bytesused != desc->iskip + desc->isize)
-			errx(1,
-			     "bad image size (%d != %d), is '%s' the "
+			errx(1, "bad image size (%u != %u), is '%s' the "
 			     "correct device? Pass '-d' to specify a "
-			     "different one",
-			     buf.bytesused, desc->isize * 2, devpath);
+			     "different one.",
+			     buf.bytesused, desc->iskip + desc->isize,
+			     devpath);
 
 		data = v4l2_buf_mmap(dev, &buf) + desc->iskip;
+
+		if (prev_frame_data) {
+			// Chicony camera workaround: average frames to compensate for flashing IR
+			if (buf.sequence % 2 != 0) {
+				memcpy(prev_frame_data, data, desc->isize);
+				v4l2_put_buffer(dev, &buf);
+				continue;
+			}
+
+			for (size_t i = 0; i < desc->isize; i++) {
+				// Average with the previous frame
+				uint16_t sum = (uint16_t)data[i] + (uint16_t)prev_frame_data[i];
+				if (sum > 255)
+					sum = 255;
+
+				avg_frame_data[i] = (uint8_t)sum;
+			}
+			data = avg_frame_data;
+		}
 
 		if (record)
 			if (lavc_encode(record, buf.sequence, data,
@@ -218,6 +241,8 @@ out:
 
 	sdl_close(ctx);
 	v4l2_close(dev);
+	free(prev_frame_data);
+	free(avg_frame_data);
 }
 
 static void run_playback(const char *filepath)
@@ -387,7 +412,7 @@ int main(int argc, char **argv)
 	sigaction(SIGHUP, &ignore_action, NULL);
 
 	while (1) {
-		int i = getopt_long(argc, argv, "hd:p:nw:f:lc:qF", opts, NULL);
+		int i = getopt_long(argc, argv, "hd:p:nw:f:lc:qFi:", opts, NULL);
 
 		switch (i) {
 		case 'd':
@@ -429,6 +454,10 @@ int main(int argc, char **argv)
 			break;
 		case 'F':
 			fullscreen = true;
+			break;
+		case 'i':
+			v4l2_dump_info(optarg);
+			exit(0);
 			break;
 		case 'h':
 		default:

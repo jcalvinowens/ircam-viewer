@@ -56,11 +56,30 @@ static const struct ircam_desc supported_descs[] = {
 		.ff_raw_fmt = AV_PIX_FMT_GRAY16LE,
 		.name = "TOPDON TC001 or compatible",
 	},
+	/*
+	 * Chicony Electronics Co., Ltd Integrated IR Camera (04f2:b71a)
+	 *
+	 * This is a standard UVC webcam that provides a 640x360 YUYV image.
+	 * It doesn't have the special concatenated format of the TOPDON TC001.
+	 */
+	{
+		.width = 640,
+		.height = 360,
+		.fps = 30,
+		.isize = 640 * 360, // grey8
+		.iskip = 0,
+		.vsize = 640 * 360 * 4, // RGBA
+		.v4l2_width = 640,
+		.v4l2_height = 360,
+		.v4l2_fmt = V4L2_PIX_FMT_GREY,
+		.ff_raw_fmt = AV_PIX_FMT_GRAY8,
+		.name = "Chicony Integrated IR Camera",
+	},
 };
 
 static unsigned int nr_camera_descs(void)
 {
-	return sizeof(supported_descs[0]) / sizeof(supported_descs);
+	return sizeof(supported_descs) / sizeof(supported_descs[0]);
 }
 
 /**

@@ -254,6 +254,35 @@ static void showtexts(struct sdl_ctx *c, struct temp_fixp max,
 {
 	char s = 'C';
 
+	// Approximate temperatures for IR webcam.
+	// This is not a thermal imaging camera.
+	// So temperature readings are NOT accurate.
+	if (!strcmp(c->desc->name, "Chicony Integrated IR Camera")) {
+		uint32_t ptemp_full;
+		uint32_t max_full;
+		min.sign   ^= 1;
+		ptemp.sign ^= 1;
+		max.sign   ^= 1;
+		ptemp.major = min.major - ptemp.major;
+		ptemp.minor = min.minor - ptemp.minor;
+		max.major = min.major - max.major;
+		max.minor = min.minor - max.minor;
+		min.major = 0;
+		min.minor = 0;
+
+		// Do a little fixed-point math to multiply x 12
+		ptemp_full = (ptemp.major << 6) | ptemp.minor;
+		max_full = (max.major << 6) | max.minor;
+
+		ptemp_full *= 12;
+		max_full *= 12;
+
+		ptemp.major = ptemp_full >> 6;
+		ptemp.minor = ptemp_full & 0x3F;
+		max.major = max_full >> 6;
+		max.minor = max_full & 0x3F;
+	}
+
 	if (c->fahren) {
 		s = 'F';
 		max = celsius_to_fahrenheit(max);
@@ -604,21 +633,31 @@ int paint_frame(struct sdl_ctx *c, uint32_t seq, const uint8_t *data)
 	uint32_t multinv;
 	uint32_t output_index;
 	int ret = NOTHING;
-	int pitch, i;
+	int pitch;
+	size_t i;
 	uint8_t *memptr;
 	SDL_Event evt;
 	SDL_Rect rect;
 
 	// Get temperature at crosshair
-	i = c->crosshair.y * c->desc->width * 2 + c->crosshair.x * 2;
-	if (c->rotate) {
-		// Mirror crosshair if output is rotated
-		i = c->desc->width * c->desc->height * 2 - i;
+	if (c->desc->ff_raw_fmt == AV_PIX_FMT_GRAY16LE) {
+		i = c->crosshair.y * c->desc->width * 2 + c->crosshair.x * 2;
+		if (c->rotate) {
+			// Mirror crosshair if output is rotated
+			i = c->desc->width * c->desc->height * 2 - i;
+		}
+		ptemp = data[i] | data[i + 1] << 8;
+	} else {
+		i = c->crosshair.y * c->desc->width + c->crosshair.x;
+		if (c->rotate) {
+			i = c->desc->width * c->desc->height - i;
+		}
+		ptemp = data[i];
 	}
-	ptemp = data[i] | data[i + 1] << 8;
 
-	for (i = 0; i < c->desc->width * c->desc->height * 2; i += 2) {
-		uint16_t v = data[i] | data[i + 1] << 8;
+	if (c->desc->ff_raw_fmt == AV_PIX_FMT_GRAY16LE) {
+		for (i = 0; i < c->desc->isize; i += 2) {
+			uint16_t v = data[i] | data[i + 1] << 8;
 		if (v > max) {
 			max = v;
 			max_point = calc_point_from_buf_offset(c, i);
@@ -627,6 +666,20 @@ int paint_frame(struct sdl_ctx *c, uint32_t seq, const uint8_t *data)
 			min = v;
 			min_point = calc_point_from_buf_offset(c, i);
 		}
+		}
+	} else {
+		for (i = 0; i < c->desc->isize; i++) {
+			uint16_t v = data[i];
+			if (v > max) {
+				max = v;
+				max_point = calc_point_from_buf_offset(c, i * 2);
+			}
+			if (v < min) {
+				min = v;
+				min_point = calc_point_from_buf_offset(c, i * 2);
+			}
+		}
+		max = 255;
 	}
 
 	rect.y = 0;
@@ -667,9 +720,16 @@ int paint_frame(struct sdl_ctx *c, uint32_t seq, const uint8_t *data)
 	 */
 
 	multinv = (1UL << 24) / ((uint32_t)max - min);
-	for (i = 0; i < c->desc->width * c->desc->height * 2; i += 2) {
-		uint32_t raw = (uint32_t)data[i] | data[i + 1] << 8;
+	for (i = 0; i < c->desc->isize;
+	     i += (c->desc->ff_raw_fmt == AV_PIX_FMT_GRAY16LE) ? 2 : 1) {
+		uint32_t raw;
 		uint8_t pval;
+		int pixel_index;
+		if (c->desc->ff_raw_fmt == AV_PIX_FMT_GRAY16LE) {
+			raw = (uint32_t)data[i] | data[i + 1] << 8;
+		} else {
+			raw = data[i];
+		}
 
 		if (raw <= min)
 			pval = 0;
@@ -678,6 +738,9 @@ int paint_frame(struct sdl_ctx *c, uint32_t seq, const uint8_t *data)
 		else
 			pval = (multinv * (raw - min)) >> 16;
 
+		pixel_index =
+			(c->desc->ff_raw_fmt == AV_PIX_FMT_GRAY16LE) ? i / 2 : i;
+
 		if (c->rotate) {
 			/*
 			 * Rotating the output by 180 is equivalent to iterating
@@ -685,11 +748,9 @@ int paint_frame(struct sdl_ctx *c, uint32_t seq, const uint8_t *data)
 			 * filling BGRA values in the same order (== subtract a
 			 * constant of 4).
 			 */
-			output_index =
-				(c->desc->width * c->desc->height - i / 2) * 4 -
-				4;
+			output_index = (c->desc->width * c->desc->height - pixel_index) * 4 - 4;
 		} else {
-			output_index = i / 2 * 4;
+			output_index = pixel_index * 4;
 		}
 
 		memptr[output_index] = getcolor(c, BLUE, pval);
